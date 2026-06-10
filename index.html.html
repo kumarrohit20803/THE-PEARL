@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DayFlow — Daily Command Center</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.10.0/dist/tabler-icons.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root{
+  --bg:#0f1117;--bg2:#181c27;--bg3:#1e2235;--bg4:#252a3d;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);
+  --text:#e8eaf0;--text2:#8b90a4;--text3:#555a72;
+  --accent:#4f8ef7;--accent-dim:rgba(79,142,247,0.15);
+  --green:#3ecf6e;--green-dim:rgba(62,207,110,0.15);
+  --amber:#f59e0b;--amber-dim:rgba(245,158,11,0.15);
+  --red:#f43f5e;--purple:#a855f7;
+  --radius:10px;--radius-sm:6px;
+  --font:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px}
+.app{display:flex;height:100vh}
+
+/* SIDEBAR */
+.sidebar{width:220px;min-width:220px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.sb-logo{padding:13px 14px 9px;border-bottom:1px solid var(--border);flex-shrink:0}
+.sb-logo h1{font-size:16px;font-weight:700;display:flex;align-items:center;gap:7px}
+.sb-logo h1 i{color:var(--accent)}
+.ws-bar{display:flex;gap:5px;padding:8px 9px;border-bottom:1px solid var(--border);flex-shrink:0}
+.ws-btn{flex:1;padding:6px 4px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:none;color:var(--text2);font-size:11px;font-weight:600;font-family:var(--font);cursor:pointer;transition:all .15s}
+.ws-btn:hover{background:var(--bg3);color:var(--text)}
+.ws-btn.neet.active{background:rgba(79,142,247,0.18);color:#4f8ef7;border-color:rgba(79,142,247,0.4)}
+.ws-btn.ssc.active{background:rgba(168,85,247,0.18);color:#a855f7;border-color:rgba(168,85,247,0.4)}
+.sb-nav{flex:1;overflow-y:auto;padding:7px}
+.nav-sec{font-size:10px;color:var(--text3);padding:9px 6px 3px;letter-spacing:.06em;text-transform:uppercase}
+.nav-btn{display:flex;align-items:center;gap:8px;width:100%;padding:7px 8px;border-radius:var(--radius-sm);border:none;background:none;color:var(--text2);font-size:12.5px;font-family:var(--font);cursor:pointer;text-align:left;transition:background .1s,color .1s}
+.nav-btn:hover{background:var(--bg3);color:var(--text)}
+.nav-btn.active{background:var(--accent-dim);color:var(--accent)}
+.nav-btn i{font-size:15px;flex-shrink:0}
+
+/* MAIN */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+
+/* EXAM COUNTDOWN HEADER */
+.exam-header{background:linear-gradient(135deg,#0f1a2e 0%,#111827 50%,#0f1117 100%);border-bottom:1px solid var(--border2);padding:14px 20px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.exam-center{flex:1;text-align:center}
+.exam-name{font-size:13px;font-weight:600;color:var(--amber);letter-spacing:.08em;text-transform:uppercase;margin-bottom:2px}
+.exam-days{font-size:38px;font-weight:800;color:var(--text);line-height:1;letter-spacing:-1px}
+.exam-days span{color:var(--amber)}
+.exam-days-label{font-size:12px;font-weight:500;color:var(--text2);margin-left:6px;vertical-align:middle}
+.exam-target{font-size:11px;color:var(--text3);margin-top:3px}
+.exam-set-btn{font-size:11px;color:var(--accent);cursor:pointer;padding:3px 8px;border:1px solid rgba(79,142,247,0.3);border-radius:4px;background:rgba(79,142,247,0.08);white-space:nowrap;flex-shrink:0}
+.exam-meta{display:flex;gap:16px;flex-shrink:0}
+.exam-meta-item{text-align:center}
+.exam-meta-item .v{font-size:18px;font-weight:700;color:var(--text)}
+.exam-meta-item .l{font-size:10px;color:var(--text3)}
+
+/* DATE TOPBAR */
+.topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:8px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0}
+.date-nav{display:flex;align-items:center;gap:8px;flex:1}
+.date-main{font-size:14px;font-weight:600}
+.date-rel{font-size:11px;color:var(--text3)}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:none;color:var(--text2);font-size:12px;font-family:var(--font);cursor:pointer;transition:background .1s,color .1s}
+.btn:hover{background:var(--bg3);color:var(--text)}
+.btn.primary{background:var(--accent-dim);color:var(--accent);border-color:rgba(79,142,247,0.3)}
+.btn.sm{padding:4px 8px;font-size:11px}
+.btn.today-btn{background:var(--green-dim);color:var(--green);border-color:rgba(62,207,110,0.3)}
+/* styled arrow nav buttons */
+.arrow-btn{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;border:1.5px solid var(--border2);background:var(--bg3);color:var(--text2);cursor:pointer;font-size:16px;font-family:var(--font);transition:all .15s;flex-shrink:0}
+.arrow-btn:hover{background:var(--accent-dim);border-color:rgba(79,142,247,0.5);color:var(--accent);transform:scale(1.08)}
+.arrow-btn:active{transform:scale(0.95)}
+.score-ring{position:relative;display:inline-flex;align-items:center;justify-content:center;width:46px;height:46px;flex-shrink:0}
+.score-ring svg{position:absolute;top:0;left:0;transform:rotate(-90deg)}
+.score-ring .sv{font-size:11px;font-weight:700;z-index:1}
+
+/* VIEWS */
+.view{display:none;flex:1;overflow-y:auto}
+.view.active{display:block}
+.content{padding:13px 16px}
+
+/* STAT CARDS */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px}
+.stat-val{font-size:21px;font-weight:700;line-height:1.1}
+.stat-lbl{font-size:11px;color:var(--text3);margin-top:2px}
+.pct-bar{height:3px;background:var(--bg4);border-radius:2px;margin-top:5px;overflow:hidden}
+.pct-fill{height:100%;border-radius:2px;transition:width .4s}
+
+/* COLORFUL SECTION CARD HEADINGS */
+.sec-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:12px;overflow:hidden}
+.sec-head{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.sec-head h2{font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;color:var(--text)}
+.sec-head-icon{width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.sec-head-icon.blue{background:rgba(79,142,247,0.18);color:#4f8ef7}
+.sec-head-icon.green{background:rgba(62,207,110,0.18);color:#3ecf6e}
+.sec-head-icon.amber{background:rgba(245,158,11,0.18);color:#f59e0b}
+.sec-head-icon.purple{background:rgba(168,85,247,0.18);color:#a855f7}
+.sec-head-icon.red{background:rgba(244,63,94,0.18);color:#f43f5e}
+.sec-head-icon.cyan{background:rgba(6,182,212,0.18);color:#06b6d4}
+
+.sec-body{padding:10px 14px}
+
+/* TASKS */
+.task-row{display:flex;align-items:center;gap:7px;padding:7px 0;border-bottom:1px solid var(--border)}
+.task-row:last-child{border-bottom:none}
+.task-row.drag-over{border-top:2px solid var(--accent)}
+.task-row.dragging{opacity:.35}
+.drag-h{color:var(--text3);font-size:15px;cursor:grab;flex-shrink:0}
+.cb{width:16px;height:16px;border-radius:4px;border:1.5px solid var(--border2);flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s}
+.cb.checked{background:var(--accent);border-color:var(--accent)}
+.cb.checked::after{content:'';display:block;width:4px;height:7px;border:1.5px solid #fff;border-top:none;border-left:none;transform:rotate(40deg);margin-bottom:2px}
+.cat-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.task-inp{flex:1;background:none;border:none;color:var(--text);font-size:13px;font-family:var(--font);outline:none;min-width:0}
+.task-inp::placeholder{color:var(--text3)}
+.task-inp.done{text-decoration:line-through;color:var(--text3)}
+/* task action icons */
+.task-actions{display:flex;align-items:center;gap:2px;opacity:0;transition:opacity .15s;flex-shrink:0}
+.task-row:hover .task-actions{opacity:1}
+.tact{width:25px;height:25px;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;transition:all .12s;border:none;background:none;font-family:var(--font)}
+.tact.arc{color:#06b6d4}.tact.arc:hover{background:rgba(6,182,212,0.18);color:#06b6d4}
+.tact.del{color:var(--text3)}.tact.del:hover{background:rgba(244,63,94,0.18);color:#f43f5e}
+.cat-badge{font-size:10px;padding:2px 6px;border-radius:3px;flex-shrink:0;font-weight:500;white-space:nowrap}
+.add-task-row{display:flex;align-items:center;gap:8px;padding:8px 0 2px;border-top:1px dashed var(--border2)}
+.add-task-row input{flex:1;background:var(--bg3);border:1px solid var(--border);color:var(--text);font-family:var(--font);font-size:13px;padding:6px 10px;border-radius:var(--radius-sm);outline:none}
+.add-task-row input:focus{border-color:var(--accent)}
+
+/* HABITS */
+.habit-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)}
+.habit-row:last-child{border-bottom:none}
+.hname{flex:1;font-size:13px}
+.hdel{color:var(--text3);font-size:13px;cursor:pointer;opacity:0;padding:2px}
+.habit-row:hover .hdel{opacity:1}
+.streak{font-size:10px;color:var(--amber)}
+.notes-area{width:100%;min-height:90px;background:none;border:none;color:var(--text);font-size:13px;font-family:var(--font);resize:none;outline:none;line-height:1.7}
+.notes-area::placeholder{color:var(--text3)}
+
+/* MODALS */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:200;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);padding:20px;width:340px;max-width:96vw;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:14px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:7px}
+.modal label{font-size:12px;color:var(--text2);display:block;margin-bottom:4px;margin-top:10px}
+.modal input,.modal select{width:100%;background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:var(--font);font-size:13px;padding:7px 10px;border-radius:var(--radius-sm);outline:none}
+.modal input:focus{border-color:var(--accent)}
+.modal-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+.cat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:6px}
+.cat-opt{padding:10px 6px;border-radius:var(--radius-sm);border:1.5px solid var(--border);cursor:pointer;text-align:center;transition:all .15s;background:var(--bg3)}
+.cat-opt:hover{border-color:var(--border2);background:var(--bg4)}
+.cat-opt .ce{font-size:20px;display:block;margin-bottom:3px}
+.cat-opt .cl{font-size:10px;font-weight:600}
+
+/* ANALYTICS TABS */
+.tab-bar{display:flex;gap:2px;padding:10px 16px 0;border-bottom:1px solid var(--border);background:var(--bg2);flex-shrink:0}
+.tab-btn{padding:6px 12px;font-size:12px;border:none;background:none;color:var(--text2);font-family:var(--font);cursor:pointer;border-radius:var(--radius-sm) var(--radius-sm) 0 0;transition:all .1s}
+.tab-btn.active{background:var(--accent-dim);color:var(--accent)}
+.charts-2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.chart-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:12px}
+.chart-title{font-size:12px;color:var(--text2);margin-bottom:8px;font-weight:500}
+
+/* ARCHIVE */
+.arch-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer}
+.arch-row:hover{background:var(--bg3);margin:0 -14px;padding:8px 14px}
+.arch-row:last-child{border-bottom:none}
+
+/* SYLLABUS */
+.subj-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:10px;overflow:hidden}
+.subj-head{padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;display:flex;align-items:center;gap:10px;user-select:none}
+.subj-head:hover{background:var(--bg3)}
+.subj-title{font-size:13px;font-weight:600;flex:1}
+.subj-pct{font-size:12px;font-weight:700}
+.subj-progress{flex-shrink:0;width:80px}
+.chap-list{padding:8px 14px}
+.chap-row{border-bottom:1px solid var(--border);padding:8px 0}
+.chap-row:last-child{border-bottom:none}
+.chap-name{font-size:13px;font-weight:500;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between}
+.chap-done-badge{font-size:10px;color:var(--green);background:var(--green-dim);padding:2px 7px;border-radius:3px}
+.chap-checks{display:flex;flex-wrap:wrap;gap:6px}
+.chap-cb-wrap{display:flex;align-items:center;gap:4px;cursor:pointer;user-select:none}
+.chap-cb-wrap input[type=checkbox]{accent-color:var(--accent);width:13px;height:13px;cursor:pointer}
+.chap-cb-label{font-size:11px;color:var(--text2)}
+.overall-progress{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);padding:14px;margin-bottom:12px}
+.op-title{font-size:13px;font-weight:600;margin-bottom:10px}
+.op-row{display:flex;align-items:center;gap:10px;margin-bottom:7px}
+.op-label{font-size:12px;color:var(--text2);width:90px;flex-shrink:0}
+.op-bar{flex:1;height:6px;background:var(--bg4);border-radius:3px;overflow:hidden}
+.op-bar-fill{height:100%;border-radius:3px;transition:width .4s}
+.op-pct{font-size:12px;font-weight:600;width:38px;text-align:right;flex-shrink:0}
+.op-overall{font-size:18px;font-weight:800;color:var(--accent);margin-top:8px;text-align:center}
+/* biology tab bar inside subject card */
+.bio-tabs{display:flex;gap:0;border-bottom:1px solid var(--border);background:var(--bg3);flex-shrink:0}
+.bio-tab{flex:1;padding:8px 10px;font-size:12px;font-weight:500;border:none;background:none;color:var(--text2);font-family:var(--font);cursor:pointer;text-align:center;border-bottom:2px solid transparent;transition:all .12s}
+.bio-tab.active{color:var(--green);border-bottom-color:var(--green);background:rgba(62,207,110,0.07)}
+
+.empty{padding:20px;text-align:center;color:var(--text3);font-size:13px}
+.empty i{font-size:26px;display:block;margin-bottom:7px;opacity:.4}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:3px}
+select option{background:var(--bg2)}
+</style>
+</head>
+<body>
+
+<!-- MODALS -->
+<div class="modal-overlay" id="modal-date">
+  <div class="modal">
+    <h3><i class="ti ti-calendar-event" style="color:var(--accent)"></i>Jump to date</h3>
+    <label>Select date</label><input type="date" id="date-picker-inp">
+    <div class="modal-btns"><button class="btn" onclick="closeModal('modal-date')">Cancel</button><button class="btn primary" onclick="confirmDateJump()">Go to date</button></div>
+  </div>
+</div>
+<div class="modal-overlay" id="modal-task">
+  <div class="modal">
+    <h3><i class="ti ti-tag" style="color:var(--accent)"></i>Select category</h3>
+    <p style="font-size:12px;color:var(--text2);margin-bottom:8px" id="modal-task-name"></p>
+    <div class="cat-grid" id="modal-cat-grid"></div>
+    <div class="modal-btns"><button class="btn" onclick="closeModal('modal-task')">Cancel</button></div>
+  </div>
+</div>
+<div class="modal-overlay" id="modal-archive-popup">
+  <div class="modal" style="width:430px">
+    <h3><i class="ti ti-archive" style="color:var(--accent)"></i>Task archive</h3>
+    <div style="display:flex;gap:7px;margin-bottom:9px">
+      <input type="text" id="arch-search" placeholder="Search…" oninput="renderArchiveModal()" style="flex:1;background:var(--bg3);border:1px solid var(--border);color:var(--text);font-family:var(--font);font-size:13px;padding:6px 10px;border-radius:var(--radius-sm);outline:none">
+      <select id="arch-cat" onchange="renderArchiveModal()" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);font-family:var(--font);font-size:12px;padding:6px;border-radius:var(--radius-sm);outline:none"><option value="">All</option></select>
+    </div>
+    <div id="arch-modal-list" style="max-height:300px;overflow-y:auto"></div>
+    <div class="modal-btns"><button class="btn" onclick="closeModal('modal-archive-popup')">Close</button></div>
+  </div>
+</div>
+<div class="modal-overlay" id="modal-countdown">
+  <div class="modal">
+    <h3><i class="ti ti-alarm" style="color:var(--amber)"></i>Set exam countdown</h3>
+    <label>Exam name</label><input type="text" id="cd-name" placeholder="e.g. NEET 2027">
+    <label>Exam date</label><input type="date" id="cd-date">
+    <div class="modal-btns"><button class="btn" onclick="closeModal('modal-countdown')">Cancel</button><button class="btn primary" onclick="saveCountdown()">Save</button></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div class="app">
+  <div class="sidebar">
+    <div class="sb-logo"><h1><i class="ti ti-bolt"></i>DayFlow</h1></div>
+    <div class="ws-bar">
+      <button class="ws-btn neet active" id="ws-neet" onclick="switchWs('neet')">⚕ NEET</button>
+      <button class="ws-btn ssc" id="ws-ssc" onclick="switchWs('ssc')">📋 SSC</button>
+    </div>
+    <div class="sb-nav">
+      <div class="nav-sec">Daily</div>
+      <button class="nav-btn active" onclick="setView('day')" id="nav-day"><i class="ti ti-calendar-day"></i>Today</button>
+      <button class="nav-btn" onclick="setView('archive')" id="nav-archive"><i class="ti ti-archive"></i>Task archive</button>
+      <div class="nav-sec">Habits</div>
+      <button class="nav-btn" onclick="setView('habits')" id="nav-habits"><i class="ti ti-repeat"></i>Manage habits</button>
+      <div class="nav-sec">Analytics</div>
+      <button class="nav-btn" onclick="setView('analytics')" id="nav-analytics"><i class="ti ti-chart-bar"></i>Analytics</button>
+      <div id="nav-syllabus-wrap">
+        <div class="nav-sec">Syllabus</div>
+        <button class="nav-btn" onclick="setView('syllabus')" id="nav-syllabus"><i class="ti ti-book"></i>Syllabus tracker</button>
+      </div>
+      <div class="nav-sec">Navigate</div>
+      <button class="nav-btn" onclick="gotoToday()"><i class="ti ti-home"></i>Jump to today</button>
+      <button class="nav-btn" onclick="openModal('modal-date')"><i class="ti ti-calendar-event"></i>Jump to date</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <!-- EXAM HEADER -->
+    <div class="exam-header">
+      <div style="flex-shrink:0">
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">Workspace</div>
+        <div id="ws-badge-label" style="font-size:13px;font-weight:700;color:var(--accent)">NEET</div>
+      </div>
+      <div class="exam-center">
+        <div class="exam-name" id="exam-name-lbl">SET YOUR EXAM</div>
+        <div class="exam-days"><span id="exam-days-num">—</span><span class="exam-days-label" id="exam-days-text">days left</span></div>
+        <div class="exam-target" id="exam-target-lbl">Click "Set exam" to configure</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">
+        <div class="exam-meta">
+          <div class="exam-meta-item"><div class="v" id="eh-weeks">—</div><div class="l">weeks</div></div>
+          <div class="exam-meta-item"><div class="v" id="eh-months">—</div><div class="l">months</div></div>
+        </div>
+        <button class="exam-set-btn" onclick="openCdModal()"><i class="ti ti-settings" style="font-size:10px;margin-right:3px"></i>Set exam</button>
+      </div>
+    </div>
+
+    <!-- DATE TOPBAR -->
+    <div class="topbar">
+      <div class="date-nav">
+        <button class="arrow-btn" onclick="shiftDate(-1)" title="Previous day"><i class="ti ti-arrow-left"></i></button>
+        <div><div class="date-main" id="date-main-lbl"></div><div class="date-rel" id="date-rel-lbl"></div></div>
+        <button class="arrow-btn" onclick="shiftDate(1)" title="Next day"><i class="ti ti-arrow-right"></i></button>
+        <button class="btn today-btn sm" id="today-btn" onclick="gotoToday()" style="display:none"><i class="ti ti-home"></i>Today</button>
+      </div>
+      <div class="score-ring">
+        <svg width="46" height="46" viewBox="0 0 46 46"><circle cx="23" cy="23" r="18" fill="none" stroke="var(--bg4)" stroke-width="4"/><circle cx="23" cy="23" r="18" fill="none" stroke="var(--accent)" stroke-width="4" stroke-linecap="round" id="score-arc" stroke-dasharray="0 113"/></svg>
+        <span class="sv" id="score-val">0%</span>
+      </div>
+    </div>
+
+    <!-- DAY VIEW -->
+    <div class="view active" id="view-day">
+      <div class="content">
+        <div class="stats-grid">
+          <div class="stat-card"><div class="stat-val" id="sv-tasks" style="color:var(--accent)">0/0</div><div class="stat-lbl">Tasks done</div><div class="pct-bar"><div class="pct-fill" id="pb-tasks" style="background:var(--accent);width:0%"></div></div></div>
+          <div class="stat-card"><div class="stat-val" id="sv-tpct">0%</div><div class="stat-lbl">Task rate</div></div>
+          <div class="stat-card"><div class="stat-val" id="sv-habits" style="color:var(--green)">0/0</div><div class="stat-lbl">Habits done</div><div class="pct-bar"><div class="pct-fill" id="pb-habits" style="background:var(--green);width:0%"></div></div></div>
+          <div class="stat-card"><div class="stat-val" id="sv-hpct">0%</div><div class="stat-lbl">Habit rate</div></div>
+        </div>
+        <div class="sec-card">
+          <div class="sec-head">
+            <h2><span class="sec-head-icon blue"><i class="ti ti-checkbox"></i></span>Today's Tasks</h2>
+            <button class="btn sm" onclick="openArchivePopup()" style="color:#06b6d4;border-color:rgba(6,182,212,0.3);background:rgba(6,182,212,0.08)"><i class="ti ti-archive"></i>From archive</button>
+          </div>
+          <div class="sec-body" id="task-list"></div>
+        </div>
+        <div class="sec-card">
+          <div class="sec-head">
+            <h2><span class="sec-head-icon green"><i class="ti ti-repeat"></i></span>Daily Habits</h2>
+            <span style="font-size:11px;color:var(--text3);display:flex;align-items:center;gap:4px"><i class="ti ti-infinity" style="font-size:12px;color:var(--green)"></i>Recurring</span>
+          </div>
+          <div class="sec-body" id="habit-list-day"></div>
+        </div>
+        <div class="sec-card">
+          <div class="sec-head">
+            <h2><span class="sec-head-icon amber"><i class="ti ti-notes"></i></span>Daily Notes</h2>
+            <span style="font-size:11px;color:var(--text3)" id="notes-saved"></span>
+          </div>
+          <div class="sec-body"><textarea class="notes-area" id="notes-area" rows="5" placeholder="Write anything — what you studied, how you felt, what needs attention tomorrow…"></textarea></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HABITS VIEW -->
+    <div class="view" id="view-habits">
+      <div class="content">
+        <div class="sec-card">
+          <div class="sec-head"><h2><span class="sec-head-icon green"><i class="ti ti-repeat"></i></span>Manage Habits</h2></div>
+          <div class="sec-body">
+            <p style="font-size:12px;color:var(--text2);margin-bottom:12px">Habits appear every day automatically.</p>
+            <div id="habit-mgmt-list"></div>
+            <div class="add-task-row" style="margin-top:10px"><input type="text" id="new-habit-inp" placeholder="New habit name…" onkeydown="if(event.key==='Enter')addHabit()"><button class="btn primary sm" onclick="addHabit()"><i class="ti ti-plus"></i>Add</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ARCHIVE VIEW -->
+    <div class="view" id="view-archive">
+      <div class="content">
+        <div class="sec-card">
+          <div class="sec-head"><h2><span class="sec-head-icon cyan"><i class="ti ti-archive"></i></span>Task Archive</h2></div>
+          <div class="sec-body">
+            <div style="display:flex;gap:7px;margin-bottom:11px">
+              <input type="text" id="main-arch-search" placeholder="Search…" oninput="renderFullArchive()" style="flex:1;background:var(--bg3);border:1px solid var(--border);color:var(--text);font-family:var(--font);font-size:13px;padding:6px 10px;border-radius:var(--radius-sm);outline:none">
+              <select id="main-arch-cat" onchange="renderFullArchive()" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);font-family:var(--font);font-size:12px;padding:6px;border-radius:var(--radius-sm);outline:none"><option value="">All</option></select>
+              <select id="main-arch-sort" onchange="renderFullArchive()" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);font-family:var(--font);font-size:12px;padding:6px;border-radius:var(--radius-sm);outline:none"><option value="newest">Newest</option><option value="oldest">Oldest</option></select>
+            </div>
+            <div id="main-archive-list"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ANALYTICS VIEW -->
+    <div class="view" id="view-analytics">
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="setATab('daily')" id="atab-daily">Daily</button>
+        <button class="tab-btn" onclick="setATab('weekly')" id="atab-weekly">Weekly</button>
+        <button class="tab-btn" onclick="setATab('monthly')" id="atab-monthly">Monthly</button>
+        <button class="tab-btn" onclick="setATab('yearly')" id="atab-yearly">Yearly</button>
+        <button class="tab-btn" onclick="setATab('alltime')" id="atab-alltime">All Time</button>
+      </div>
+      <div class="content" id="analytics-content"></div>
+    </div>
+
+    <!-- SYLLABUS VIEW -->
+    <div class="view" id="view-syllabus">
+      <div class="content" id="syllabus-content"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════
+// SYLLABUS DATA (preloaded from PDF)
+// ════════════════════════════════════════════
+const NEET_SYLLABUS = {
+  physics: {
+    label:'Physics', emoji:'⚛️', color:'#4f8ef7',
+    chapters:[
+      'Mathematical Tools','Units & Dimensions','Motion in a Straight Line','Motion in a Plane',
+      'Laws of Motion','Work, Energy and Power','System of Particles and Rotational Motion',
+      'Gravitation','Mechanical Properties of Solids','Mechanical Properties of Fluids',
+      'Thermal Properties of Matter','Thermodynamics','Kinetic Theory','Oscillations','Waves',
+      'Electric Charges and Fields','Electrostatic Potential and Capacitance','Current Electricity',
+      'Moving Charges and Magnetism','Magnetism and Matter','Electromagnetic Induction',
+      'Alternating Current','Electromagnetic Waves','Ray Optics and Optical Instruments',
+      'Wave Optics','Dual Nature of Radiation and Matter','Atoms','Nuclei',
+      'Semiconductor Electronics','Experiment Skills in Physics'
+    ]
+  },
+  chemistry: {
+    label:'Chemistry', emoji:'🧪', color:'#f97316',
+    chapters:[
+      'Some Basic Concepts of Chemistry','Structure of Atom',
+      'Classification of Elements and Periodicity in Properties',
+      'Chemical Bonding and Molecular Structure','Thermodynamics','Equilibrium',
+      'Redox Reactions','The p-Block Elements (Group 13-14)',
+      'Organic Chemistry - Basic Principles and Techniques','Hydrocarbons',
+      'Solutions','Electrochemistry','Chemical Kinetics',
+      'The p-Block Elements (Group 15-18)','The d- and f-Block Elements',
+      'Coordination Compounds','Haloalkanes and Haloarenes',
+      'Alcohols, Phenols and Ethers','Aldehydes, Ketones and Carboxylic Acids',
+      'Amines','Biomolecules','Principles Related to Practical Chemistry'
+    ]
+  },
+  botany: {
+    label:'Botany', emoji:'🌿', color:'#22c55e',
+    chapters:[
+      'The Living World','Biological Classification','Plant Kingdom',
+      'Morphology of Flowering Plants','Anatomy of Flowering Plants',
+      'Cell: The Unit of Life','Biomolecules','Cell Cycle and Cell Division',
+      'Photosynthesis in Higher Plants','Respiration in Plants','Plant Growth and Development',
+      'Sexual Reproduction in Flowering Plants','Principles of Inheritance and Variation',
+      'Molecular Basis of Inheritance','Evolution','Microbes in Human Welfare',
+      'Biotechnology: Principles and Processes','Biotechnology and its Applications',
+      'Organisms and Populations','Ecosystem','Biodiversity and Conservation'
+    ]
+  },
+  zoology: {
+    label:'Zoology', emoji:'🐾', color:'#f43f5e',
+    chapters:[
+      'Animal Kingdom','Structural Organisation in Animals',
+      'Breathing and Exchange of Gases','Body Fluids and Circulation',
+      'Excretory Products and their Elimination','Locomotion and Movement',
+      'Neural Control and Coordination','Chemical Coordination and Integration',
+      'Human Reproduction','Reproductive Health','Human Health and Disease'
+    ]
+  }
+};
+
+const CHAP_STEPS = ['Lectures','Notes','DPP','Module','PYQ','Extra Module','Revision 1','Revision 2','Revision 3'];
+
+// ════════════════════════════════════════════
+// WORKSPACES
+// ════════════════════════════════════════════
+const WS = {
+  neet:{
+    label:'NEET', color:'#4f8ef7', dimColor:'rgba(79,142,247,0.15)',
+    cats:[
+      {id:'physics',   label:'Physics',   emoji:'⚛️', icon:'ti-atom',           color:'#4f8ef7', dim:'rgba(79,142,247,0.18)'},
+      {id:'chemistry', label:'Chemistry', emoji:'🧪', icon:'ti-flask',          color:'#f97316', dim:'rgba(249,115,22,0.18)'},
+      {id:'botany',    label:'Botany',    emoji:'🌿', icon:'ti-plant',          color:'#22c55e', dim:'rgba(34,197,94,0.18)'},
+      {id:'zoology',   label:'Zoology',   emoji:'🐾', icon:'ti-paw',            color:'#f43f5e', dim:'rgba(244,63,94,0.18)'},
+      {id:'revision',  label:'Revision',  emoji:'🔄', icon:'ti-refresh',        color:'#a855f7', dim:'rgba(168,85,247,0.18)'},
+      {id:'test',      label:'Test',      emoji:'📝', icon:'ti-clipboard',      color:'#eab308', dim:'rgba(234,179,8,0.18)'},
+    ]
+  },
+  ssc:{
+    label:'SSC', color:'#a855f7', dimColor:'rgba(168,85,247,0.15)',
+    cats:[
+      {id:'maths',     label:'Mathematics',      emoji:'🔢', icon:'ti-math-function', color:'#4f8ef7', dim:'rgba(79,142,247,0.18)'},
+      {id:'english',   label:'English',          emoji:'📚', icon:'ti-book',          color:'#22c55e', dim:'rgba(34,197,94,0.18)'},
+      {id:'reasoning', label:'Reasoning',        emoji:'🧠', icon:'ti-brain',         color:'#f97316', dim:'rgba(249,115,22,0.18)'},
+      {id:'gkgs',      label:'GK/GS',            emoji:'🌍', icon:'ti-world',         color:'#06b6d4', dim:'rgba(6,182,212,0.18)'},
+      {id:'revision',  label:'Revision',         emoji:'🔄', icon:'ti-refresh',       color:'#a855f7', dim:'rgba(168,85,247,0.18)'},
+      {id:'test',      label:'Test',             emoji:'📝', icon:'ti-clipboard',     color:'#eab308', dim:'rgba(234,179,8,0.18)'},
+      {id:'practice',  label:'Question Practice',emoji:'✍️', icon:'ti-pencil',        color:'#f43f5e', dim:'rgba(244,63,94,0.18)'},
+    ]
+  }
+};
+
+// ════════════════════════════════════════════
+// STORAGE
+// ════════════════════════════════════════════
+const lk=(ws,s)=>`df_${ws}_${s}_v5`;
+const lg=(ws,s)=>{try{return JSON.parse(localStorage.getItem(lk(ws,s))||'null')}catch{return null}};
+const ls=(ws,s,v)=>{try{localStorage.setItem(lk(ws,s),JSON.stringify(v))}catch{}};
+const getHabits=ws=>lg(ws,'habits')||[];
+const saveHabits=(ws,h)=>ls(ws,'habits',h);
+const getAllData=ws=>lg(ws,'data')||{};
+function getDD(ws,key){const all=getAllData(ws);if(!all[key])all[key]={tasks:[],habitChecks:{},notes:''};return all[key]}
+function setDD(ws,key,val){const all=getAllData(ws);all[key]=val;ls(ws,'data',all)}
+const getCD=ws=>lg(ws,'cd')||null;
+const saveCD=(ws,v)=>ls(ws,'cd',v);
+function getSyllabus(ws){return lg(ws,'syllabus')||{}}
+function setSyllabus(ws,v){ls(ws,'syllabus',v)}
+
+// ════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════
+let ws='neet', currentDate, currentView='day', currentATab='daily';
+let dragSrc=null, chartInst={}, notesT=null, midnightT=null;
+let pendingText='';
+
+// ════════════════════════════════════════════
+// UTILS
+// ════════════════════════════════════════════
+function todayDate(){const d=new Date();return new Date(d.getFullYear(),d.getMonth(),d.getDate())}
+function toKey(d){return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
+function fromKey(k){const p=k.split('-');return new Date(+p[0],+p[1]-1,+p[2])}
+function fmtDate(d){return d.toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}
+function fmtShort(d){return d.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}
+const cats=()=>WS[ws].cats;
+const getCat=id=>cats().find(c=>c.id===id)||cats()[0];
+
+// ════════════════════════════════════════════
+// MIDNIGHT
+// ════════════════════════════════════════════
+function scheduleMidnight(){
+  clearTimeout(midnightT);
+  const now=new Date();
+  const next=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1,0,0,5);
+  midnightT=setTimeout(()=>{
+    if(toKey(currentDate)===toKey(new Date(now.getFullYear(),now.getMonth(),now.getDate()))){currentDate=todayDate();renderAll()}
+    scheduleMidnight();
+  },next-now);
+}
+
+// ════════════════════════════════════════════
+// WORKSPACE SWITCH
+// ════════════════════════════════════════════
+function switchWs(newWs){
+  ws=newWs;
+  document.getElementById('ws-neet').classList.toggle('active',newWs==='neet');
+  document.getElementById('ws-ssc').classList.toggle('active',newWs==='ssc');
+  const w=WS[ws];
+  document.getElementById('ws-badge-label').textContent=w.label;
+  document.getElementById('ws-badge-label').style.color=w.color;
+  // show/hide syllabus nav
+  document.getElementById('nav-syllabus-wrap').style.display=newWs==='neet'?'':'none';
+  if(newWs==='ssc'&&currentView==='syllabus'){setView('day');return}
+  renderAll();
+  if(currentView==='analytics')renderAnalytics();
+  else if(currentView==='archive')initFullArchive();
+  else if(currentView==='habits')renderHabitMgmt();
+  else if(currentView==='syllabus')renderSyllabus();
+}
+
+// ════════════════════════════════════════════
+// EXAM HEADER
+// ════════════════════════════════════════════
+function renderExamHeader(){
+  const cd=getCD(ws);
+  if(!cd||!cd.name||!cd.date){
+    document.getElementById('exam-name-lbl').textContent='SET YOUR EXAM';
+    document.getElementById('exam-days-num').textContent='—';
+    document.getElementById('exam-days-text').textContent='days left';
+    document.getElementById('exam-target-lbl').textContent='Click "Set exam" to configure';
+    document.getElementById('eh-weeks').textContent='—';
+    document.getElementById('eh-months').textContent='—';
+    return;
+  }
+  const examDate=new Date(cd.date+'T00:00:00');
+  const t=todayDate();
+  const days=Math.max(0,Math.ceil((examDate-t)/86400000));
+  const weeks=Math.floor(days/7);
+  const months=Math.floor(days/30.44);
+  document.getElementById('exam-name-lbl').textContent=cd.name.toUpperCase();
+  document.getElementById('exam-days-num').textContent=days;
+  document.getElementById('exam-days-text').textContent=days===1?'day left':'days left';
+  document.getElementById('exam-target-lbl').textContent='Target: '+examDate.toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'});
+  document.getElementById('eh-weeks').textContent=weeks;
+  document.getElementById('eh-months').textContent=months;
+}
+function openCdModal(){const cd=getCD(ws);if(cd){document.getElementById('cd-name').value=cd.name||'';document.getElementById('cd-date').value=cd.date||''}else{document.getElementById('cd-name').value='';document.getElementById('cd-date').value=''}openModal('modal-countdown')}
+function saveCountdown(){const name=document.getElementById('cd-name').value.trim();const date=document.getElementById('cd-date').value;if(name&&date){saveCD(ws,{name,date});renderExamHeader()}closeModal('modal-countdown')}
+
+// ════════════════════════════════════════════
+// DATE LABEL + SCORE
+// ════════════════════════════════════════════
+function renderDateLabel(){
+  const t=todayDate();const diff=Math.round((currentDate-t)/86400000);
+  document.getElementById('date-main-lbl').textContent=fmtDate(currentDate);
+  const rel={0:'Today',1:'Tomorrow','-1':'Yesterday'};
+  document.getElementById('date-rel-lbl').textContent=rel[diff]!==undefined?rel[diff]:diff<0?`${Math.abs(diff)} days ago`:`In ${diff} days`;
+  document.getElementById('today-btn').style.display=diff!==0?'inline-flex':'none';
+}
+
+function renderScore(){
+  const key=toKey(currentDate);const dd=getDD(ws,key);const habits=getHabits(ws);
+  const tasks=(dd.tasks||[]).filter(t=>t.text&&t.text.trim());
+  const td=tasks.filter(t=>t.done).length;
+  const hd=habits.filter(h=>dd.habitChecks&&dd.habitChecks[h.id]).length;
+  const total=tasks.length+habits.length;const done=td+hd;
+  const pct=total===0?0:Math.round(done/total*100);
+  const tp=tasks.length===0?0:Math.round(td/tasks.length*100);
+  const hp=habits.length===0?0:Math.round(hd/habits.length*100);
+  document.getElementById('score-val').textContent=pct+'%';
+  const circ=2*Math.PI*18;const arc=circ*pct/100;
+  document.getElementById('score-arc').setAttribute('stroke-dasharray',`${arc.toFixed(1)} ${(circ-arc).toFixed(1)}`);
+  document.getElementById('sv-tasks').textContent=`${td}/${tasks.length}`;
+  document.getElementById('sv-tpct').textContent=tp+'%';
+  document.getElementById('sv-habits').textContent=`${hd}/${habits.length}`;
+  document.getElementById('sv-hpct').textContent=hp+'%';
+  document.getElementById('pb-tasks').style.width=tp+'%';
+  document.getElementById('pb-habits').style.width=hp+'%';
+}
+
+// ════════════════════════════════════════════
+// TASKS
+// ════════════════════════════════════════════
+function renderTasks(){
+  const key=toKey(currentDate);let dd=getDD(ws,key);
+  if(!dd.tasks)dd.tasks=[];
+  setDD(ws,key,dd);
+  const el=document.getElementById('task-list');el.innerHTML='';
+  if(dd.tasks.length===0){
+    const e=document.createElement('div');e.className='empty';e.style.padding='12px 0';
+    e.innerHTML='<i class="ti ti-checkbox" style="font-size:22px;opacity:.3;display:block;margin-bottom:5px"></i>No tasks yet — type below to add one.';
+    el.appendChild(e);
+  }
+  dd.tasks.forEach((task,idx)=>{
+    const row=document.createElement('div');row.className='task-row';row.draggable=true;
+    row.addEventListener('dragstart',e=>{dragSrc=idx;row.classList.add('dragging');e.dataTransfer.effectAllowed='move'});
+    row.addEventListener('dragend',()=>{row.classList.remove('dragging');el.querySelectorAll('.task-row').forEach(r=>r.classList.remove('drag-over'))});
+    row.addEventListener('dragover',e=>{e.preventDefault();el.querySelectorAll('.task-row').forEach(r=>r.classList.remove('drag-over'));row.classList.add('drag-over')});
+    row.addEventListener('drop',e=>{e.preventDefault();row.classList.remove('drag-over');if(dragSrc!==null&&dragSrc!==idx){const[m]=dd.tasks.splice(dragSrc,1);dd.tasks.splice(idx,0,m);setDD(ws,key,dd);renderTasks();renderScore()}});
+    const h=document.createElement('span');h.className='drag-h';h.innerHTML='<i class="ti ti-grip-vertical"></i>';
+    const cb=document.createElement('div');cb.className='cb'+(task.done?' checked':'');cb.setAttribute('role','checkbox');cb.setAttribute('aria-checked',task.done);
+    cb.onclick=()=>{task.done=!task.done;setDD(ws,key,dd);renderTasks();renderScore()};
+    const cat=getCat(task.cat);
+    const dot=document.createElement('div');dot.className='cat-dot';dot.style.background=cat.color;dot.title=cat.label;
+    const inp=document.createElement('input');inp.type='text';inp.className='task-inp'+(task.done?' done':'');inp.value=task.text;inp.placeholder='Task…';
+    inp.oninput=e=>{task.text=e.target.value;setDD(ws,key,dd);renderScore()};
+    const badge=document.createElement('span');badge.className='cat-badge';badge.style.cssText=`background:${cat.dim};color:${cat.color}`;
+    badge.innerHTML=`<i class="ti ${cat.icon}" style="font-size:10px;margin-right:2px"></i>${cat.label}`;
+    const del=document.createElement('span');del.className='tdel';del.innerHTML='<i class="ti ti-x"></i>';
+    del.onclick=()=>{dd.tasks.splice(idx,1);setDD(ws,key,dd);renderTasks();renderScore()};
+    row.append(h,cb,dot,inp,badge,del);el.appendChild(row);
+  });
+  const addRow=document.createElement('div');addRow.className='add-task-row';
+  const inp=document.createElement('input');inp.type='text';inp.id='add-task-inp';inp.placeholder='Type a task and press Enter…';
+  inp.onkeydown=e=>{if(e.key==='Enter'){const txt=inp.value.trim();if(!txt)return;pendingText=txt;openCatModal()}};
+  const ab=document.createElement('button');ab.className='btn sm';ab.innerHTML='<i class="ti ti-archive"></i>';ab.title='From archive';ab.onclick=openArchivePopup;
+  addRow.append(inp,ab);el.appendChild(addRow);
+}
+
+function openCatModal(){
+  document.getElementById('modal-task-name').textContent=`"${pendingText}"`;
+  const grid=document.getElementById('modal-cat-grid');grid.innerHTML='';
+  cats().forEach(c=>{
+    const el=document.createElement('div');el.className='cat-opt';el.style.borderColor=c.color+'33';
+    el.innerHTML=`<span class="ce">${c.emoji}</span><span class="cl" style="color:${c.color}">${c.label}</span>`;
+    el.onclick=()=>confirmAddTask(c.id);
+    grid.appendChild(el);
+  });
+  openModal('modal-task');
+}
+
+function confirmAddTask(catId){
+  const key=toKey(currentDate);let dd=getDD(ws,key);
+  if(!dd.tasks)dd.tasks=[];
+  dd.tasks.push({id:`t${Date.now()}${Math.random()}`,text:pendingText,done:false,cat:catId});
+  setDD(ws,key,dd);pendingText='';
+  closeModal('modal-task');renderTasks();renderScore();
+  setTimeout(()=>{const i=document.getElementById('add-task-inp');if(i)i.focus()},50);
+}
+
+function addTaskFromArchive(text,cat){
+  const key=toKey(currentDate);let dd=getDD(ws,key);
+  if(!dd.tasks)dd.tasks=[];
+  dd.tasks.push({id:`t${Date.now()}${Math.random()}`,text,done:false,cat});
+  setDD(ws,key,dd);closeModal('modal-archive-popup');renderTasks();renderScore();
+}
+
+// ════════════════════════════════════════════
+// HABITS
+// ════════════════════════════════════════════
+function renderHabitsDay(){
+  const key=toKey(currentDate);const dd=getDD(ws,key);const habits=getHabits(ws);
+  const el=document.getElementById('habit-list-day');el.innerHTML='';
+  if(!habits.length){el.innerHTML='<div class="empty"><i class="ti ti-repeat"></i>No habits yet.</div>';return}
+  habits.forEach(h=>{
+    const row=document.createElement('div');row.className='habit-row';
+    const checked=!!(dd.habitChecks&&dd.habitChecks[h.id]);
+    const cb=document.createElement('div');cb.className='cb'+(checked?' checked':'');
+    cb.onclick=()=>{if(!dd.habitChecks)dd.habitChecks={};dd.habitChecks[h.id]=!dd.habitChecks[h.id];setDD(ws,key,dd);renderHabitsDay();renderScore()};
+    const nm=document.createElement('span');nm.className='hname';nm.textContent=h.name;
+    if(checked)nm.style.cssText='text-decoration:line-through;color:var(--text3)';
+    const str=getHabitStreak(h.id);
+    if(str>0){const s=document.createElement('span');s.className='streak';s.textContent=`${str}d`;row.append(cb,nm,s)}
+    else row.append(cb,nm);
+    el.appendChild(row);
+  });
+}
+
+function getHabitStreak(hid){
+  const all=getAllData(ws);let str=0;let d=new Date(todayDate());
+  for(let i=0;i<366;i++){d.setDate(d.getDate()-1);const k=toKey(d);if(all[k]&&all[k].habitChecks&&all[k].habitChecks[hid])str++;else break}
+  return str;
+}
+
+function renderHabitMgmt(){
+  const habits=getHabits(ws);const el=document.getElementById('habit-mgmt-list');el.innerHTML='';
+  if(!habits.length){el.innerHTML='<div class="empty" style="padding:12px 0">No habits yet.</div>';return}
+  habits.forEach((h,idx)=>{
+    const row=document.createElement('div');row.className='habit-row';
+    const nm=document.createElement('span');nm.className='hname';nm.textContent=h.name;
+    const str=getHabitStreak(h.id);const s=document.createElement('span');s.className='streak';s.textContent=str>0?`${str}d streak`:'';
+    const del=document.createElement('span');del.className='hdel';del.innerHTML='<i class="ti ti-trash"></i>';
+    del.onclick=()=>{const hh=getHabits(ws);hh.splice(idx,1);saveHabits(ws,hh);renderHabitMgmt();renderHabitsDay();renderScore()};
+    row.append(nm,s,del);el.appendChild(row);
+  });
+}
+
+function addHabit(){
+  const inp=document.getElementById('new-habit-inp');const name=inp.value.trim();if(!name)return;
+  const hh=getHabits(ws);hh.push({id:`h${Date.now()}${Math.random()}`,name});saveHabits(ws,hh);
+  inp.value='';renderHabitMgmt();renderHabitsDay();renderScore();
+}
+
+// ════════════════════════════════════════════
+// NOTES
+// ════════════════════════════════════════════
+function renderNotes(){
+  const key=toKey(currentDate);const dd=getDD(ws,key);
+  const area=document.getElementById('notes-area');area.value=dd.notes||'';
+  area.oninput=()=>{
+    clearTimeout(notesT);
+    notesT=setTimeout(()=>{const k=toKey(currentDate);const d=getDD(ws,k);d.notes=area.value;setDD(ws,k,d);
+      const sl=document.getElementById('notes-saved');sl.textContent='Saved';setTimeout(()=>sl.textContent='',1500)},500);
+  };
+}
+
+// ════════════════════════════════════════════
+// ARCHIVE
+// ════════════════════════════════════════════
+function getAllTasks(){
+  const all=getAllData(ws);const tasks=[];
+  Object.entries(all).forEach(([key,dd])=>{(dd.tasks||[]).forEach(t=>{if(t.text&&t.text.trim())tasks.push({...t,dateKey:key})})});
+  return tasks;
+}
+function renderArchiveModal(){
+  const search=(document.getElementById('arch-search').value||'').toLowerCase();
+  const catF=document.getElementById('arch-cat').value;
+  let tasks=getAllTasks();
+  if(search)tasks=tasks.filter(t=>t.text.toLowerCase().includes(search));
+  if(catF)tasks=tasks.filter(t=>t.cat===catF);
+  tasks.sort((a,b)=>b.dateKey.localeCompare(a.dateKey));
+  const el=document.getElementById('arch-modal-list');el.innerHTML='';
+  if(!tasks.length){el.innerHTML='<div class="empty"><i class="ti ti-archive"></i>No tasks found.</div>';return}
+  tasks.slice(0,80).forEach(t=>{
+    const cat=getCat(t.cat);const row=document.createElement('div');row.className='arch-row';
+    row.innerHTML=`<div class="cat-dot" style="background:${cat.color}"></div><div style="flex:1;font-size:13px">${t.text}</div><span class="cat-badge" style="background:${cat.dim};color:${cat.color}">${cat.label}</span><span style="font-size:11px;color:var(--text3)">${fmtShort(fromKey(t.dateKey))}</span>`;
+    row.onclick=()=>addTaskFromArchive(t.text,t.cat);el.appendChild(row);
+  });
+}
+function openArchivePopup(){
+  const sel=document.getElementById('arch-cat');sel.innerHTML='<option value="">All</option>';
+  cats().forEach(c=>{const o=document.createElement('option');o.value=c.id;o.textContent=c.label;sel.appendChild(o)});
+  renderArchiveModal();openModal('modal-archive-popup');
+}
+function renderFullArchive(){
+  const search=(document.getElementById('main-arch-search').value||'').toLowerCase();
+  const catF=document.getElementById('main-arch-cat').value;
+  const sortV=document.getElementById('main-arch-sort').value;
+  let tasks=getAllTasks();
+  if(search)tasks=tasks.filter(t=>t.text.toLowerCase().includes(search));
+  if(catF)tasks=tasks.filter(t=>t.cat===catF);
+  tasks.sort((a,b)=>sortV==='oldest'?a.dateKey.localeCompare(b.dateKey):b.dateKey.localeCompare(a.dateKey));
+  const el=document.getElementById('main-archive-list');el.innerHTML='';
+  if(!tasks.length){el.innerHTML='<div class="empty"><i class="ti ti-archive"></i>No tasks yet.</div>';return}
+  tasks.forEach(t=>{
+    const cat=getCat(t.cat);const row=document.createElement('div');row.className='arch-row';
+    const si=t.done?'<i class="ti ti-check" style="color:var(--green);font-size:13px;flex-shrink:0"></i>':'<i class="ti ti-clock" style="color:var(--text3);font-size:13px;flex-shrink:0"></i>';
+    row.innerHTML=`${si}<div class="cat-dot" style="background:${cat.color};flex-shrink:0"></div><div style="flex:1;font-size:13px">${t.text}</div><span class="cat-badge" style="background:${cat.dim};color:${cat.color};flex-shrink:0">${cat.label}</span><span style="font-size:11px;color:var(--text3);flex-shrink:0">${fmtShort(fromKey(t.dateKey))}</span>`;
+    el.appendChild(row);
+  });
+}
+function initFullArchive(){
+  const sel=document.getElementById('main-arch-cat');sel.innerHTML='<option value="">All categories</option>';
+  cats().forEach(c=>{const o=document.createElement('option');o.value=c.id;o.textContent=c.label;sel.appendChild(o)});
+  renderFullArchive();
+}
+
+// ════════════════════════════════════════════
+// ANALYTICS
+// ════════════════════════════════════════════
+function setATab(t){
+  currentATab=t;
+  ['daily','weekly','monthly','yearly','alltime'].forEach(n=>document.getElementById('atab-'+n).classList.toggle('active',n===t));
+  renderAnalytics();
+}
+
+function getDateRange(type){
+  const t=todayDate();const dates=[];
+  if(type==='weekly'){for(let i=6;i>=0;i--){const d=new Date(t);d.setDate(d.getDate()-i);dates.push(d)}}
+  else if(type==='monthly'){for(let i=29;i>=0;i--){const d=new Date(t);d.setDate(d.getDate()-i);dates.push(d)}}
+  else if(type==='yearly'){for(let i=11;i>=0;i--){const d=new Date(t);d.setMonth(d.getMonth()-i,1);dates.push(d)}}
+  return dates;
+}
+
+function getStatsForKey(key){
+  const all=getAllData(ws);const habits=getHabits(ws);
+  const v=all[key]||{};
+  const tasks=(v.tasks||[]).filter(t=>t.text&&t.text.trim());
+  const tT=tasks.length,dT=tasks.filter(t=>t.done).length;
+  const tH=habits.length,dH=habits.filter(h=>v.habitChecks&&v.habitChecks[h.id]).length;
+  const catMap={};cats().forEach(c=>catMap[c.id]={done:0,total:0});
+  tasks.forEach(t=>{const c=t.cat||cats()[0].id;if(catMap[c]){catMap[c].total++;if(t.done)catMap[c].done++}});
+  return{tT,dT,tH,dH,catMap};
+}
+
+function getAllTimeStats(){
+  const all=getAllData(ws);const habits=getHabits(ws);
+  let tT=0,dT=0,tH=0,dH=0;const catMap={};cats().forEach(c=>catMap[c.id]={done:0,total:0});
+  const monthMap={};
+  Object.entries(all).forEach(([key,v])=>{
+    const tasks=(v.tasks||[]).filter(t=>t.text&&t.text.trim());
+    tT+=tasks.length;dT+=tasks.filter(t=>t.done).length;
+    tH+=habits.length;dH+=habits.filter(h=>v.habitChecks&&v.habitChecks[h.id]).length;
+    tasks.forEach(t=>{const c=t.cat||cats()[0].id;if(catMap[c]){catMap[c].total++;if(t.done)catMap[c].done++}});
+    const mo=key.slice(0,7);
+    if(!monthMap[mo])monthMap[mo]={tT:0,dT:0,tH:0,dH:0};
+    monthMap[mo].tT+=tasks.length;monthMap[mo].dT+=tasks.filter(t=>t.done).length;
+    monthMap[mo].tH+=habits.length;monthMap[mo].dH+=habits.filter(h=>v.habitChecks&&v.habitChecks[h.id]).length;
+  });
+  let bestMonth='—',bestPct=0;
+  Object.entries(monthMap).forEach(([mo,s])=>{const p=s.tT+s.tH>0?Math.round((s.dT+s.dH)/(s.tT+s.tH)*100):0;if(p>bestPct){bestPct=p;bestMonth=mo}});
+  const mostDone=cats().reduce((a,b)=>catMap[b.id].done>catMap[a.id].done?b:a,cats()[0]);
+  const mostMissed=cats().filter(c=>catMap[c.id].total>0).reduce((a,b)=>(catMap[b.id].total-catMap[b.id].done)>(catMap[a.id].total-catMap[a.id].done)?b:a,cats()[0]);
+  return{tT,dT,tH,dH,catMap,bestMonth,bestPct,mostDone,mostMissed};
+}
+
+function destroyCharts(){Object.values(chartInst).forEach(c=>{try{c.destroy()}catch{}});chartInst={}}
+const coBase={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#555a72',font:{size:10},maxRotation:45,autoSkip:true},grid:{color:'rgba(255,255,255,0.04)'}},y:{beginAtZero:true,ticks:{color:'#555a72',font:{size:10}},grid:{color:'rgba(255,255,255,0.04)'}}}};
+
+function renderAnalytics(){
+  const el=document.getElementById('analytics-content');
+  destroyCharts();
+  el.innerHTML='';
+
+  if(currentATab==='daily'){
+    const key=toKey(currentDate);const s=getStatsForKey(key);
+    const tp=s.tT?Math.round(s.dT/s.tT*100):0;const hp=s.tH?Math.round(s.dH/s.tH*100):0;
+    const prod=s.tT+s.tH>0?Math.round((s.dT+s.dH)/(s.tT+s.tH)*100):0;
+    el.innerHTML=`
+      <div class="stats-grid" style="margin-top:4px">
+        <div class="stat-card"><div class="stat-val" style="color:var(--accent)">${s.dT}/${s.tT}</div><div class="stat-lbl">Tasks done</div></div>
+        <div class="stat-card"><div class="stat-val">${s.tT-s.dT}</div><div class="stat-lbl">Tasks missed</div></div>
+        <div class="stat-card"><div class="stat-val" style="color:var(--green)">${s.dH}/${s.tH}</div><div class="stat-lbl">Habits done</div></div>
+        <div class="stat-card"><div class="stat-val" style="color:var(--amber)">${prod}%</div><div class="stat-lbl">Productivity</div></div>
+      </div>
+      <div class="charts-2">
+        <div class="chart-card"><div class="chart-title">Task rate</div><div style="height:140px"><canvas id="a-pie-t"></canvas></div></div>
+        <div class="chart-card"><div class="chart-title">Habit rate</div><div style="height:140px"><canvas id="a-pie-h"></canvas></div></div>
+      </div>
+      <div class="sec-card"><div class="sec-head"><h2><i class="ti ti-category"></i>Category performance (today)</h2></div><div class="sec-body" id="a-cat-bars"></div></div>`;
+    setTimeout(()=>{
+      chartInst.pt=new Chart(document.getElementById('a-pie-t'),{type:'doughnut',data:{labels:['Done','Missed'],datasets:[{data:[s.dT||0,(s.tT-s.dT)||1],backgroundColor:['#4f8ef7','#252a3d'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
+      chartInst.ph=new Chart(document.getElementById('a-pie-h'),{type:'doughnut',data:{labels:['Done','Missed'],datasets:[{data:[s.dH||0,(s.tH-s.dH)||1],backgroundColor:['#3ecf6e','#252a3d'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
+      const catEl=document.getElementById('a-cat-bars');
+      cats().forEach(c=>{const cs=s.catMap[c.id]||{done:0,total:0};const pct=cs.total?Math.round(cs.done/cs.total*100):0;
+        catEl.innerHTML+=`<div style="margin-bottom:9px"><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px">${c.emoji} ${c.label}</span><span style="font-size:12px;color:var(--text2)">${cs.done}/${cs.total} — ${pct}%</span></div><div class="pct-bar" style="height:5px"><div class="pct-fill" style="background:${c.color};width:${pct}%"></div></div></div>`});
+    },30);
+    return;
+  }
+
+  if(currentATab==='alltime'){
+    const s=getAllTimeStats();
+    const tp=s.tT?Math.round(s.dT/s.tT*100):0;
+    el.innerHTML=`
+      <div class="stats-grid" style="margin-top:4px">
+        <div class="stat-card"><div class="stat-val" style="color:var(--accent)">${s.tT}</div><div class="stat-lbl">Total tasks created</div></div>
+        <div class="stat-card"><div class="stat-val" style="color:var(--green)">${s.dT}</div><div class="stat-lbl">Total completed</div></div>
+        <div class="stat-card"><div class="stat-val" style="color:var(--red)">${s.tT-s.dT}</div><div class="stat-lbl">Total missed</div></div>
+        <div class="stat-card"><div class="stat-val">${tp}%</div><div class="stat-lbl">All-time rate</div></div>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-val" style="color:var(--green)">${s.dH}</div><div class="stat-lbl">Habits completed</div></div>
+        <div class="stat-card"><div class="stat-val" style="color:var(--amber)">${s.bestMonth||'—'}</div><div class="stat-lbl">Best month (${s.bestPct}%)</div></div>
+        <div class="stat-card"><div class="stat-val" style="font-size:14px;color:var(--accent)">${s.mostDone?s.mostDone.emoji+' '+s.mostDone.label:'—'}</div><div class="stat-lbl">Most completed cat.</div></div>
+        <div class="stat-card"><div class="stat-val" style="font-size:14px;color:var(--red)">${s.mostMissed?s.mostMissed.emoji+' '+s.mostMissed.label:'—'}</div><div class="stat-lbl">Most missed cat.</div></div>
+      </div>
+      <div class="sec-card"><div class="sec-head"><h2><i class="ti ti-category"></i>All-time category breakdown</h2></div><div class="sec-body" id="at-cat-bars"></div></div>`;
+    setTimeout(()=>{
+      const catEl=document.getElementById('at-cat-bars');
+      cats().forEach(c=>{const cs=s.catMap[c.id]||{done:0,total:0};const pct=cs.total?Math.round(cs.done/cs.total*100):0;
+        catEl.innerHTML+=`<div style="margin-bottom:9px"><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px">${c.emoji} ${c.label}</span><span style="font-size:12px;color:var(--text2)">${cs.done}/${cs.total} — ${pct}%</span></div><div class="pct-bar" style="height:5px"><div class="pct-fill" style="background:${c.color};width:${pct}%"></div></div></div>`});
+    },30);
+    return;
+  }
+
+  // weekly / monthly / yearly
+  const tab=currentATab;
+  const typeMap={weekly:'weekly',monthly:'monthly',yearly:'yearly'};
+  const dates=getDateRange(typeMap[tab])||[];
+  const labels=dates.map(d=>tab==='yearly'?d.toLocaleDateString('en-IN',{month:'short'}):tab==='monthly'?d.toLocaleDateString('en-IN',{day:'numeric',month:'short'}):d.toLocaleDateString('en-IN',{weekday:'short'}));
+  const stats=dates.map(d=>{
+    if(tab==='yearly'){
+      const m=d.getMonth(),y=d.getFullYear();
+      const all=getAllData(ws);
+      const keys=Object.keys(all).filter(k=>{const dd=fromKey(k);return dd.getMonth()===m&&dd.getFullYear()===y});
+      const combined={tT:0,dT:0,tH:0,dH:0,catMap:{}};cats().forEach(c=>combined.catMap[c.id]={done:0,total:0});
+      keys.forEach(k=>{const s=getStatsForKey(k);combined.tT+=s.tT;combined.dT+=s.dT;combined.tH+=s.tH;combined.dH+=s.dH;cats().forEach(c=>{combined.catMap[c.id].done+=s.catMap[c.id]?.done||0;combined.catMap[c.id].total+=s.catMap[c.id]?.total||0})});
+      return combined;
+    }
+    return getStatsForKey(toKey(d));
+  });
+  const totT=stats.reduce((a,s)=>a+s.tT,0),totD=stats.reduce((a,s)=>a+s.dT,0);
+  const totH=stats.reduce((a,s)=>a+s.tH,0),totHD=stats.reduce((a,s)=>a+s.dH,0);
+  const prod=stats.map(s=>{const t=s.tT+s.tH;return t===0?0:Math.round((s.dT+s.dH)/t*100)});
+  const avgP=prod.length?Math.round(prod.reduce((a,b)=>a+b,0)/prod.length):0;
+  const catTotals={};cats().forEach(c=>catTotals[c.id]={done:0,total:0});
+  stats.forEach(s=>cats().forEach(c=>{catTotals[c.id].done+=s.catMap[c.id]?.done||0;catTotals[c.id].total+=s.catMap[c.id]?.total||0}));
+
+  el.innerHTML=`
+    <div class="stats-grid" style="margin-top:4px">
+      <div class="stat-card"><div class="stat-val" style="color:var(--accent)">${totD}/${totT}</div><div class="stat-lbl">Tasks done</div></div>
+      <div class="stat-card"><div class="stat-val">${totT?Math.round(totD/totT*100):0}%</div><div class="stat-lbl">Task rate</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--green)">${totHD}/${totH}</div><div class="stat-lbl">Habits done</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--amber)">${avgP}%</div><div class="stat-lbl">Avg productivity</div></div>
+    </div>
+    <div class="charts-2">
+      <div class="chart-card"><div class="chart-title">Tasks completed</div><div style="height:150px"><canvas id="ac-tasks"></canvas></div></div>
+      <div class="chart-card"><div class="chart-title">Habit consistency</div><div style="height:150px"><canvas id="ac-habits"></canvas></div></div>
+    </div>
+    <div class="charts-2">
+      <div class="chart-card"><div class="chart-title">Task completion rate</div><div style="height:140px"><canvas id="ac-pie-t"></canvas></div></div>
+      <div class="chart-card"><div class="chart-title">Productivity %</div><div style="height:140px"><canvas id="ac-prod"></canvas></div></div>
+    </div>
+    <div class="sec-card"><div class="sec-head"><h2><i class="ti ti-category"></i>Category breakdown</h2></div><div class="sec-body">
+      <div style="height:160px"><canvas id="ac-cat"></canvas></div>
+    </div></div>`;
+
+  setTimeout(()=>{
+    chartInst.t=new Chart(document.getElementById('ac-tasks'),{type:'bar',data:{labels,datasets:[{label:'Total',data:stats.map(s=>s.tT),backgroundColor:'rgba(79,142,247,0.18)'},{label:'Done',data:stats.map(s=>s.dT),backgroundColor:'#4f8ef7'}]},options:coBase});
+    chartInst.h=new Chart(document.getElementById('ac-habits'),{type:'bar',data:{labels,datasets:[{label:'Total',data:stats.map(s=>s.tH),backgroundColor:'rgba(62,207,110,0.18)'},{label:'Done',data:stats.map(s=>s.dH),backgroundColor:'#3ecf6e'}]},options:coBase});
+    chartInst.pt=new Chart(document.getElementById('ac-pie-t'),{type:'doughnut',data:{labels:['Done','Remaining'],datasets:[{data:[totD||0,Math.max(0,totT-totD)||1],backgroundColor:['#4f8ef7','#252a3d'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
+    chartInst.prod=new Chart(document.getElementById('ac-prod'),{type:'line',data:{labels,datasets:[{data:prod,borderColor:'#4f8ef7',backgroundColor:'rgba(79,142,247,0.1)',tension:.3,fill:true,pointRadius:3,pointBackgroundColor:'#4f8ef7'}]},options:{...coBase,scales:{...coBase.scales,y:{...coBase.scales.y,max:100,ticks:{...coBase.scales.y.ticks,callback:v=>v+'%'}}}}});
+    chartInst.cat=new Chart(document.getElementById('ac-cat'),{type:'bar',data:{labels:cats().map(c=>c.emoji+' '+c.label),datasets:[{label:'Done',data:cats().map(c=>catTotals[c.id].done),backgroundColor:cats().map(c=>c.color)},{label:'Total',data:cats().map(c=>catTotals[c.id].total),backgroundColor:cats().map(c=>c.dim)}]},options:{...coBase,plugins:{legend:{display:true,labels:{color:'#8b90a4',font:{size:11}}}}}});
+  },30);
+}
+
+// ════════════════════════════════════════════
+// SYLLABUS TRACKER (NEET only)
+// ════════════════════════════════════════════
+function getSyllabusData(){return getSyllabus(ws)}
+
+function getChapKey(subj,chapIdx){return`${subj}__${chapIdx}`}
+
+function getChapProgress(subj,chapIdx){
+  const data=getSyllabusData();
+  const key=getChapKey(subj,chapIdx);
+  return data[key]||{};
+}
+
+function setChapProgress(subj,chapIdx,stepIdx,val){
+  const data=getSyllabusData();
+  const key=getChapKey(subj,chapIdx);
+  if(!data[key])data[key]={};
+  data[key][stepIdx]=val;
+  setSyllabus(ws,data);
+}
+
+function calcSubjProgress(subj){
+  const chapters=NEET_SYLLABUS[subj].chapters;
+  let completed=0;
+  chapters.forEach((_,ci)=>{
+    const prog=getChapProgress(subj,ci);
+    if(CHAP_STEPS.every((_,si)=>prog[si]))completed++;
+  });
+  return{completed,total:chapters.length,pct:chapters.length?Math.round(completed/chapters.length*100):0};
+}
+
+function renderSyllabus(){
+  const el=document.getElementById('syllabus-content');el.innerHTML='';
+  const subjects=Object.keys(NEET_SYLLABUS);
+
+  // Overall progress block
+  const overallEl=document.createElement('div');overallEl.className='overall-progress';
+  let overallSum=0;
+  const opRows=subjects.map(subj=>{
+    const s=NEET_SYLLABUS[subj];const prog=calcSubjProgress(subj);overallSum+=prog.pct;
+    return{subj,s,prog};
+  });
+  const overallAvg=Math.round(overallSum/subjects.length);
+  overallEl.innerHTML=`<div class="op-title"><i class="ti ti-book-2" style="margin-right:6px;color:var(--accent)"></i>Overall NEET Syllabus Progress</div>`+
+    opRows.map(r=>`<div class="op-row"><span class="op-label">${r.s.emoji} ${r.s.label}</span><div class="op-bar"><div class="op-bar-fill" style="background:${r.s.color};width:${r.prog.pct}%"></div></div><span class="op-pct" style="color:${r.s.color}">${r.prog.pct}%</span><span style="font-size:11px;color:var(--text3);margin-left:8px">${r.prog.completed}/${r.prog.total}</span></div>`).join('')+
+    `<div class="op-overall"><i class="ti ti-chart-pie" style="margin-right:6px"></i>Overall: ${overallAvg}%</div>`;
+  el.appendChild(overallEl);
+
+  // Subject cards
+  subjects.forEach(subj=>{
+    const s=NEET_SYLLABUS[subj];const prog=calcSubjProgress(subj);
+    const card=document.createElement('div');card.className='subj-card';
+    const headId=`sh-${subj}`;const bodyId=`sb-${subj}`;
+    card.innerHTML=`
+      <div class="subj-head" onclick="toggleSubjBody('${bodyId}','${headId}')">
+        <span style="font-size:18px">${s.emoji}</span>
+        <span class="subj-title" style="color:${s.color}">${s.label}</span>
+        <span class="subj-pct" style="color:${s.color}">${prog.pct}%</span>
+        <div class="subj-progress"><div class="pct-bar" style="height:5px"><div class="pct-fill" style="background:${s.color};width:${prog.pct}%"></div></div></div>
+        <span style="font-size:11px;color:var(--text3)">${prog.completed}/${prog.total}</span>
+        <i class="ti ti-chevron-down" id="${headId}" style="font-size:14px;color:var(--text3);margin-left:4px;transition:transform .2s"></i>
+      </div>
+      <div id="${bodyId}" class="chap-list" style="display:none"></div>`;
+    el.appendChild(card);
+    // Pre-render chapters into the body (hidden)
+    const body=card.querySelector(`#${bodyId}`);
+    s.chapters.forEach((chap,ci)=>{
+      const prog2=getChapProgress(subj,ci);
+      const allDone=CHAP_STEPS.every((_,si)=>prog2[si]);
+      const chapDiv=document.createElement('div');chapDiv.className='chap-row';
+      const doneBadge=allDone?'<span class="chap-done-badge">✅ Completed</span>':'';
+      chapDiv.innerHTML=`<div class="chap-name">${chap}${doneBadge}</div>`;
+      const checks=document.createElement('div');checks.className='chap-checks';
+      CHAP_STEPS.forEach((step,si)=>{
+        const wrap=document.createElement('label');wrap.className='chap-cb-wrap';
+        const inp=document.createElement('input');inp.type='checkbox';inp.checked=!!prog2[si];
+        inp.onchange=e=>{setChapProgress(subj,ci,si,e.target.checked);refreshSubjCard(subj,ci)};
+        const lbl=document.createElement('span');lbl.className='chap-cb-label';lbl.textContent=step;
+        wrap.append(inp,lbl);checks.appendChild(wrap);
+      });
+      chapDiv.appendChild(checks);body.appendChild(chapDiv);
+    });
+  });
+}
+
+function toggleSubjBody(bodyId,iconId){
+  const body=document.getElementById(bodyId);const icon=document.getElementById(iconId);
+  const open=body.style.display==='none';
+  body.style.display=open?'block':'none';
+  if(icon)icon.style.transform=open?'rotate(180deg)':'';
+}
+
+function refreshSubjCard(subj,chapIdx){
+  // Update the chapter row's done badge and refresh overall progress
+  renderSyllabus();
+}
+
+// ════════════════════════════════════════════
+// VIEW NAV
+// ════════════════════════════════════════════
+const ALL_VIEWS=['day','habits','archive','analytics','syllabus'];
+function setView(v){
+  currentView=v;
+  ALL_VIEWS.forEach(n=>{document.getElementById('view-'+n).classList.toggle('active',n===v);const b=document.getElementById('nav-'+n);if(b)b.classList.toggle('active',n===v)});
+  if(v==='analytics'){currentATab='daily';['daily','weekly','monthly','yearly','alltime'].forEach(n=>document.getElementById('atab-'+n).classList.toggle('active',n==='daily'));renderAnalytics()}
+  else if(v==='habits')renderHabitMgmt();
+  else if(v==='archive')initFullArchive();
+  else if(v==='syllabus')renderSyllabus();
+}
+
+function shiftDate(delta){const d=new Date(currentDate);d.setDate(d.getDate()+delta);currentDate=d;renderAll()}
+function gotoToday(){currentDate=todayDate();renderAll();setView('day')}
+function openModal(id){document.getElementById(id).classList.add('open')}
+function closeModal(id){document.getElementById(id).classList.remove('open')}
+function confirmDateJump(){const v=document.getElementById('date-picker-inp').value;if(v){const p=v.split('-');currentDate=new Date(+p[0],+p[1]-1,+p[2]);renderAll();setView('day')}closeModal('modal-date')}
+document.querySelectorAll('.modal-overlay').forEach(el=>el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('open')}));
+
+function renderAll(){
+  renderDateLabel();renderTasks();renderHabitsDay();renderNotes();renderScore();renderExamHeader();
+}
+
+// INIT
+currentDate=todayDate();
+switchWs('neet');
+scheduleMidnight();
+</script>
+</body>
+</html>
