@@ -1,0 +1,2241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DayFlow — Daily Command Center</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.10.0/dist/tabler-icons.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+:root{
+  --bg:#0f1117;--bg2:#181c27;--bg3:#1e2235;--bg4:#252a3d;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);
+  --text:#e8eaf0;--text2:#8b90a4;--text3:#555a72;
+  --accent:#4f8ef7;--accent-dim:rgba(79,142,247,0.15);
+  --green:#3ecf6e;--green-dim:rgba(62,207,110,0.15);
+  --amber:#f59e0b;--amber-dim:rgba(245,158,11,0.15);
+  --red:#f43f5e;--purple:#a855f7;
+  --radius:10px;--radius-sm:6px;
+  --font:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px}
+.app{display:flex;height:100vh}
+
+/* ═══ AUTH SCREENS ═══ */
+.auth-screen{display:none;height:100vh;width:100vw;align-items:center;justify-content:center;background:radial-gradient(ellipse at top,#1a1f33 0%,#0f1117 60%)}
+.auth-screen.active{display:flex}
+.auth-card{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:32px;width:360px;max-width:92vw;box-shadow:0 20px 60px rgba(0,0,0,0.4)}
+.auth-logo{display:flex;align-items:center;gap:9px;justify-content:center;margin-bottom:6px}
+.auth-logo i{font-size:26px;color:var(--accent)}
+.auth-logo span{font-size:20px;font-weight:700}
+.auth-sub{text-align:center;font-size:12px;color:var(--text3);margin-bottom:22px}
+.auth-field{margin-bottom:14px}
+.auth-field label{font-size:12px;color:var(--text2);display:block;margin-bottom:5px;font-weight:500}
+.auth-field input{width:100%;background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:var(--font);font-size:14px;padding:10px 12px;border-radius:var(--radius-sm);outline:none;transition:border-color .15s}
+.auth-field input:focus{border-color:var(--accent)}
+.auth-field .hint{font-size:11px;color:var(--text3);margin-top:4px}
+.auth-btn{width:100%;padding:11px;border-radius:var(--radius-sm);border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:600;font-family:var(--font);cursor:pointer;transition:opacity .15s;margin-top:6px}
+.auth-btn:hover{opacity:.9}
+.auth-btn:disabled{opacity:.5;cursor:not-allowed}
+.auth-btn.secondary{background:none;border:1px solid var(--border2);color:var(--text2)}
+.auth-switch{text-align:center;font-size:12px;color:var(--text3);margin-top:18px}
+.auth-switch a{color:var(--accent);cursor:pointer;text-decoration:none;font-weight:500}
+.auth-error{background:rgba(244,63,94,0.12);border:1px solid rgba(244,63,94,0.3);color:#f87171;font-size:12px;padding:9px 12px;border-radius:var(--radius-sm);margin-bottom:14px;display:none}
+.auth-error.show{display:block}
+.auth-success{background:rgba(62,207,110,0.12);border:1px solid rgba(62,207,110,0.3);color:#4ade80;font-size:12px;padding:9px 12px;border-radius:var(--radius-sm);margin-bottom:14px;display:none}
+.auth-success.show{display:block}
+.auth-loading{text-align:center;color:var(--text3);font-size:13px;padding:40px 0}
+.spinner{width:28px;height:28px;border:3px solid var(--bg4);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* SIDEBAR */
+.sidebar{width:220px;min-width:220px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.sb-logo{padding:13px 14px 9px;border-bottom:1px solid var(--border);flex-shrink:0}
+.sb-logo h1{font-size:16px;font-weight:700;display:flex;align-items:center;gap:7px}
+.sb-logo h1 i{color:var(--accent)}
+.ws-bar{display:flex;gap:5px;padding:8px 9px;border-bottom:1px solid var(--border);flex-shrink:0}
+.ws-btn{flex:1;padding:6px 4px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:none;color:var(--text2);font-size:11px;font-weight:600;font-family:var(--font);cursor:pointer;transition:all .15s}
+.ws-btn:hover{background:var(--bg3);color:var(--text)}
+.ws-btn.neet.active{background:rgba(79,142,247,0.18);color:#4f8ef7;border-color:rgba(79,142,247,0.4)}
+.ws-btn.ssc.active{background:rgba(168,85,247,0.18);color:#a855f7;border-color:rgba(168,85,247,0.4)}
+.sb-nav{flex:1;overflow-y:auto;padding:7px}
+.nav-sec{font-size:10px;color:var(--text3);padding:9px 6px 3px;letter-spacing:.06em;text-transform:uppercase}
+.nav-btn{display:flex;align-items:center;gap:8px;width:100%;padding:7px 8px;border-radius:var(--radius-sm);border:none;background:none;color:var(--text2);font-size:12.5px;font-family:var(--font);cursor:pointer;text-align:left;transition:background .1s,color .1s}
+.nav-btn:hover{background:var(--bg3);color:var(--text)}
+.nav-btn.active{background:var(--accent-dim);color:var(--accent)}
+.nav-btn i{font-size:15px;flex-shrink:0}
+.sb-sync{padding:8px 12px;border-top:1px solid var(--border);font-size:10px;color:var(--text3);display:flex;align-items:center;gap:5px;flex-shrink:0}
+.sb-sync .dot{width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0}
+.sb-sync .dot.syncing{background:var(--amber);animation:pulse 1s infinite}
+.sb-sync .dot.error{background:var(--red)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* MAIN */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+
+/* EXAM COUNTDOWN HEADER */
+.exam-header{background:linear-gradient(135deg,#0f1a2e 0%,#111827 50%,#0f1117 100%);border-bottom:1px solid var(--border2);padding:14px 20px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.exam-center{flex:1;text-align:center}
+.exam-name{font-size:13px;font-weight:600;color:var(--amber);letter-spacing:.08em;text-transform:uppercase;margin-bottom:2px}
+.exam-days{font-size:38px;font-weight:800;color:var(--text);line-height:1;letter-spacing:-1px}
+.exam-days span{color:var(--amber)}
+.exam-days-label{font-size:12px;font-weight:500;color:var(--text2);margin-left:6px;vertical-align:middle}
+.exam-target{font-size:11px;color:var(--text3);margin-top:3px}
+.exam-set-btn{font-size:11px;color:var(--accent);cursor:pointer;padding:3px 8px;border:1px solid rgba(79,142,247,0.3);border-radius:4px;background:rgba(79,142,247,0.08);white-space:nowrap;flex-shrink:0}
+.exam-meta{display:flex;gap:16px;flex-shrink:0}
+.exam-meta-item{text-align:center}
+.exam-meta-item .v{font-size:18px;font-weight:700;color:var(--text)}
+.exam-meta-item .l{font-size:10px;color:var(--text3)}
+
+/* DATE TOPBAR */
+.topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:8px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0}
+.date-nav{display:flex;align-items:center;gap:8px;flex:1}
+.date-main{font-size:14px;font-weight:600}
+.date-rel{font-size:11px;color:var(--text3)}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:none;color:var(--text2);font-size:12px;font-family:var(--font);cursor:pointer;transition:background .1s,color .1s}
+.btn:hover{background:var(--bg3);color:var(--text)}
+.btn.primary{background:var(--accent-dim);color:var(--accent);border-color:rgba(79,142,247,0.3)}
+.btn.sm{padding:4px 8px;font-size:11px}
+.btn.today-btn{background:var(--green-dim);color:var(--green);border-color:rgba(62,207,110,0.3)}
+.btn.danger{background:rgba(244,63,94,0.1);color:#f87171;border-color:rgba(244,63,94,0.3)}
+.btn.danger:hover{background:rgba(244,63,94,0.2)}
+.arrow-btn{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;border:1.5px solid var(--border2);background:var(--bg3);color:var(--text2);cursor:pointer;font-size:16px;font-family:var(--font);transition:all .15s;flex-shrink:0}
+.arrow-btn:hover{background:var(--accent-dim);border-color:rgba(79,142,247,0.5);color:var(--accent);transform:scale(1.08)}
+.arrow-btn:active{transform:scale(0.95)}
+.score-ring{position:relative;display:inline-flex;align-items:center;justify-content:center;width:46px;height:46px;flex-shrink:0}
+.score-ring svg{position:absolute;top:0;left:0;transform:rotate(-90deg)}
+.score-ring .sv{font-size:11px;font-weight:700;z-index:1}
+
+/* VIEWS */
+.view{display:none;flex:1;overflow-y:auto}
+.view.active{display:block}
+.content{padding:13px 16px}
+
+/* STAT CARDS */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px}
+.stat-val{font-size:21px;font-weight:700;line-height:1.1}
+.stat-lbl{font-size:11px;color:var(--text3);margin-top:2px}
+.pct-bar{height:3px;background:var(--bg4);border-radius:2px;margin-top:5px;overflow:hidden}
+.pct-fill{height:100%;border-radius:2px;transition:width .4s}
+
+/* COLORFUL SECTION CARD HEADINGS */
+.sec-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:12px;overflow:hidden}
+.sec-head{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.sec-head h2{font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;color:var(--text)}
+.sec-head-icon{width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.sec-head-icon.blue{background:rgba(79,142,247,0.18);color:#4f8ef7}
+.sec-head-icon.green{background:rgba(62,207,110,0.18);color:#3ecf6e}
+.sec-head-icon.amber{background:rgba(245,158,11,0.18);color:#f59e0b}
+.sec-head-icon.purple{background:rgba(168,85,247,0.18);color:#a855f7}
+.sec-head-icon.red{background:rgba(244,63,94,0.18);color:#f43f5e}
+.sec-head-icon.cyan{background:rgba(6,182,212,0.18);color:#06b6d4}
+.sec-body{padding:10px 14px}
+
+/* TASKS */
+.task-row{display:flex;align-items:center;gap:7px;padding:7px 0;border-bottom:1px solid var(--border)}
+.task-row:last-child{border-bottom:none}
+.task-row.drag-over{border-top:2px solid var(--accent)}
+.task-row.dragging{opacity:.35}
+.drag-h{color:var(--text3);font-size:15px;cursor:grab;flex-shrink:0}
+.cb{width:16px;height:16px;border-radius:4px;border:1.5px solid var(--border2);flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s}
+.cb.checked{background:var(--accent);border-color:var(--accent)}
+.cb.checked::after{content:'';display:block;width:4px;height:7px;border:1.5px solid #fff;border-top:none;border-left:none;transform:rotate(40deg);margin-bottom:2px}
+.cat-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.task-inp{flex:1;background:none;border:none;color:var(--text);font-size:13px;font-family:var(--font);outline:none;min-width:0}
+.task-inp::placeholder{color:var(--text3)}
+.task-inp.done{text-decoration:line-through;color:var(--text3)}
+.task-actions{display:flex;align-items:center;gap:2px;opacity:0;transition:opacity .15s;flex-shrink:0}
+.task-row:hover .task-actions{opacity:1}
+.tact{width:25px;height:25px;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;transition:all .12s;border:none;background:none;font-family:var(--font)}
+.tact.arc{color:#06b6d4}.tact.arc:hover{background:rgba(6,182,212,0.18);color:#06b6d4}
+.tact.del{color:var(--text3)}.tact.del:hover{background:rgba(244,63,94,0.18);color:#f43f5e}
+.cat-badge{font-size:10px;padding:2px 6px;border-radius:3px;flex-shrink:0;font-weight:500;white-space:nowrap}
+.add-task-row{display:flex;align-items:center;gap:8px;padding:8px 0 2px;border-top:1px dashed var(--border2)}
+.add-task-row input{flex:1;background:var(--bg3);border:1px solid var(--border);color:var(--text);font-family:var(--font);font-size:13px;padding:6px 10px;border-radius:var(--radius-sm);outline:none}
+.add-task-row input:focus{border-color:var(--accent)}
+
+/* HABITS */
+.habit-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)}
+.habit-row:last-child{border-bottom:none}
+.hname{flex:1;font-size:13px}
+.hdel{color:var(--text3);font-size:13px;cursor:pointer;opacity:0;padding:2px}
+.habit-row:hover .hdel{opacity:1}
+.streak{font-size:10px;color:var(--amber)}
+.notes-area{width:100%;min-height:90px;background:none;border:none;color:var(--text);font-size:13px;font-family:var(--font);resize:none;outline:none;line-height:1.7}
+.notes-area::placeholder{color:var(--text3)}
+
+/* MODALS */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:200;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);padding:20px;width:340px;max-width:96vw;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:14px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:7px}
+.modal label{font-size:12px;color:var(--text2);display:block;margin-bottom:4px;margin-top:10px}
+.modal input,.modal select{width:100%;background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:var(--font);font-size:13px;padding:7px 10px;border-radius:var(--radius-sm);outline:none}
+.modal input:focus{border-color:var(--accent)}
+.modal-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+.cat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:6px}
+.cat-opt{padding:10px 6px;border-radius:var(--radius-sm);border:1.5px solid var(--border);cursor:pointer;text-align:center;transition:all .15s;background:var(--bg3)}
+.cat-opt:hover{border-color:var(--border2);background:var(--bg4)}
+.cat-opt .ce{font-size:20px;display:block;margin-bottom:3px}
+.cat-opt .cl{font-size:10px;font-weight:600}
+
+/* ANALYTICS TABS */
+.tab-bar{display:flex;gap:2px;padding:10px 16px 0;border-bottom:1px solid var(--border);background:var(--bg2);flex-shrink:0}
+.tab-btn{padding:6px 12px;font-size:12px;border:none;background:none;color:var(--text2);font-family:var(--font);cursor:pointer;border-radius:var(--radius-sm) var(--radius-sm) 0 0;transition:all .1s}
+.tab-btn.active{background:var(--accent-dim);color:var(--accent)}
+.charts-2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.chart-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:12px}
+.chart-title{font-size:12px;color:var(--text2);margin-bottom:8px;font-weight:500}
+
+/* ARCHIVE */
+.arch-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer}
+.arch-row:hover{background:var(--bg3);margin:0 -14px;padding:8px 14px}
+.arch-row:last-child{border-bottom:none}
+
+/* ═══ SYLLABUS TRACKER V2 — left nav + premium table ═══ */
+.syll-layout{display:flex;gap:14px;height:100%}
+.syll-nav{width:190px;min-width:190px;flex-shrink:0}
+.syll-nav-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;position:sticky;top:0}
+.syll-nav-head{padding:10px 14px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3)}
+.syll-nav-item{display:flex;align-items:center;gap:9px;padding:11px 14px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .12s;position:relative}
+.syll-nav-item:last-child{border-bottom:none}
+.syll-nav-item:hover{background:var(--bg3)}
+.syll-nav-item.active{background:var(--bg3)}
+.syll-nav-item.active::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--subj-color,var(--accent))}
+.syll-nav-emoji{font-size:18px;flex-shrink:0}
+.syll-nav-info{flex:1;min-width:0}
+.syll-nav-label{font-size:12.5px;font-weight:600;color:var(--text)}
+.syll-nav-pct{font-size:11px;font-weight:700;margin-top:1px}
+.syll-nav-bar{height:3px;background:var(--bg4);border-radius:2px;margin-top:5px;overflow:hidden}
+.syll-nav-bar-fill{height:100%;border-radius:2px;transition:width .4s}
+.syll-overall-card{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);padding:12px 14px;margin-bottom:10px}
+.syll-overall-title{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--text3);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.syll-overall-pct{font-size:26px;font-weight:800;color:var(--accent);line-height:1}
+.syll-overall-bar{height:6px;background:var(--bg4);border-radius:3px;overflow:hidden;margin-top:8px}
+.syll-overall-bar-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,#4f8ef7,#3ecf6e);transition:width .4s}
+
+.syll-content{flex:1;min-width:0;overflow-y:auto}
+
+/* subject header / progress hero */
+.syll-subj-header{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:14px;display:flex;align-items:center;gap:18px}
+.syll-subj-emoji-big{font-size:36px;flex-shrink:0}
+.syll-subj-titles{flex:1}
+.syll-subj-title{font-size:18px;font-weight:700}
+.syll-subj-sub{font-size:12px;color:var(--text3);margin-top:2px}
+.syll-subj-stats{display:flex;gap:18px;align-items:center;flex-shrink:0}
+.syll-subj-stat{text-align:center}
+.syll-subj-stat .v{font-size:22px;font-weight:800}
+.syll-subj-stat .l{font-size:10px;color:var(--text3);margin-top:1px}
+.syll-subj-ring{position:relative;width:64px;height:64px;flex-shrink:0}
+.syll-subj-ring svg{transform:rotate(-90deg)}
+.syll-subj-ring-val{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800}
+
+/* edit tracker button */
+.edit-tracker-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;border:1.5px solid var(--border2);background:var(--bg3);color:var(--text2);font-size:12px;font-weight:600;font-family:var(--font);cursor:pointer;transition:all .15s;flex-shrink:0}
+.edit-tracker-btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(79,142,247,0.08)}
+.edit-tracker-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+/* premium table */
+.syll-table-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.syll-table-scroll{overflow-x:auto}
+.syll-table{width:100%;border-collapse:collapse;min-width:640px}
+.syll-table th{font-size:10.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;padding:12px 8px;text-align:center;border-bottom:1.5px solid var(--border2);background:var(--bg3);white-space:nowrap;position:relative}
+.syll-table th.th-chapter{text-align:left;padding-left:16px;min-width:220px;position:sticky;left:0;background:var(--bg3);z-index:2}
+.syll-table th.th-completed{color:var(--green)}
+.syll-table td{padding:10px 8px;text-align:center;border-bottom:1px solid var(--border);vertical-align:middle}
+.syll-table td.td-chapter{text-align:left;padding-left:16px;font-size:13px;font-weight:500;position:sticky;left:0;background:var(--bg2);z-index:1;display:flex;align-items:center;gap:8px}
+.syll-table tr:last-child td{border-bottom:none}
+.syll-table tr:hover td{background:var(--bg3)}
+.syll-table tr:hover td.td-chapter{background:var(--bg3)}
+.syll-table tr.row-complete td{background:rgba(62,207,110,0.05)}
+.syll-table tr.row-complete:hover td{background:rgba(62,207,110,0.1)}
+.syll-table tr.row-complete td.td-chapter{background:rgba(62,207,110,0.05)}
+.syll-table tr.row-complete:hover td.td-chapter{background:rgba(62,207,110,0.1)}
+.chap-num{font-size:11px;color:var(--text3);font-weight:700;min-width:22px;flex-shrink:0;text-align:right}
+
+/* big modern checkbox */
+.big-cb{width:22px;height:22px;border-radius:6px;border:2px solid var(--border2);background:var(--bg3);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0}
+.big-cb:hover{border-color:var(--accent)}
+.big-cb.checked{background:var(--accent);border-color:var(--accent)}
+.big-cb.checked::after{content:'';display:block;width:6px;height:11px;border:2.5px solid #fff;border-top:none;border-left:none;transform:rotate(40deg) translate(-1px,-1px)}
+.big-cb.completed-cb.checked{background:var(--green);border-color:var(--green)}
+
+.completed-pill{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.completed-pill.yes{background:var(--green-dim);color:var(--green)}
+.completed-pill.no{background:var(--bg4);color:var(--text3)}
+
+/* edit mode */
+.drag-handle-syll{cursor:grab;color:var(--text3);font-size:15px;flex-shrink:0;opacity:.6}
+.drag-handle-syll:hover{opacity:1;color:var(--accent)}
+.syll-table tr.dragging{opacity:.4}
+.syll-table tr.drag-over-row td{border-top:2px solid var(--accent)}
+.chap-edit-name{background:none;border:1px solid transparent;border-radius:5px;padding:4px 6px;font-size:13px;font-weight:500;color:var(--text);font-family:var(--font);width:100%;outline:none}
+.chap-edit-name:hover,.chap-edit-name:focus{background:var(--bg3);border-color:var(--border2)}
+.chap-del-btn{width:24px;height:24px;border-radius:6px;border:none;background:none;color:var(--text3);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .12s}
+.chap-del-btn:hover{background:rgba(244,63,94,0.18);color:#f43f5e}
+.col-edit-th{display:flex;flex-direction:column;align-items:center;gap:4px}
+.col-edit-th input{width:100%;background:var(--bg4);border:1px solid var(--border2);color:var(--text);font-size:10px;font-family:var(--font);padding:3px 4px;border-radius:4px;text-align:center;text-transform:none;font-weight:600;outline:none}
+.col-del-btn{width:18px;height:18px;border-radius:4px;border:none;background:rgba(244,63,94,0.15);color:#f87171;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:10px}
+.col-move-btns{display:flex;gap:2px}
+.col-move-btn{width:16px;height:16px;border-radius:3px;border:none;background:var(--bg4);color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:9px}
+.col-move-btn:hover{background:var(--accent-dim);color:var(--accent)}
+.add-chapter-row{display:flex;gap:8px;padding:12px 16px;border-top:1px dashed var(--border2);background:var(--bg2)}
+.add-chapter-row input{flex:1;background:var(--bg3);border:1px solid var(--border);color:var(--text);font-family:var(--font);font-size:13px;padding:8px 12px;border-radius:8px;outline:none}
+.add-chapter-row input:focus{border-color:var(--accent)}
+.add-column-bar{display:flex;gap:8px;padding:12px 16px;background:var(--bg2);border-top:1px solid var(--border);align-items:center}
+.add-column-bar input{flex:1;background:var(--bg3);border:1px solid var(--border);color:var(--text);font-family:var(--font);font-size:13px;padding:8px 12px;border-radius:8px;outline:none}
+.edit-banner{background:rgba(79,142,247,0.1);border:1px solid rgba(79,142,247,0.3);border-radius:8px;padding:9px 14px;font-size:12px;color:var(--accent);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+
+/* mobile */
+@media (max-width: 760px){
+  .syll-layout{flex-direction:column}
+  .syll-nav{width:100%;min-width:0}
+  .syll-nav-card{position:static}
+  .syll-subj-header{flex-wrap:wrap}
+  .syll-subj-stats{width:100%;justify-content:space-around}
+}
+
+
+/* ACCOUNT PAGE */
+.acct-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px}
+.acct-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)}
+.acct-row:last-child{border-bottom:none}
+.acct-label{font-size:12px;color:var(--text2)}
+.acct-value{font-size:13px;font-weight:600}
+
+.empty{padding:20px;text-align:center;color:var(--text3);font-size:13px}
+.empty i{font-size:26px;display:block;margin-bottom:7px;opacity:.4}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:3px}
+select option{background:var(--bg2)}
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════
+     LOADING SCREEN
+════════════════════════════════════════════ -->
+<div class="auth-screen active" id="screen-loading">
+  <div class="auth-loading"><div class="spinner"></div>Loading DayFlow…</div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     FIRST-TIME SETUP — Create Your Password
+════════════════════════════════════════════ -->
+<div class="auth-screen" id="screen-setup">
+  <div class="auth-card">
+    <div class="auth-logo"><i class="ti ti-bolt"></i><span>DayFlow</span></div>
+    <div class="auth-sub">Create Your Password</div>
+    <div class="auth-error" id="setup-error"></div>
+    <div class="auth-field">
+      <label>New Password</label>
+      <input type="password" id="setup-password" placeholder="Minimum 8 characters" autocomplete="new-password">
+    </div>
+    <div class="auth-field">
+      <label>Confirm Password</label>
+      <input type="password" id="setup-password2" placeholder="Re-enter password" autocomplete="new-password">
+    </div>
+    <div class="auth-field">
+      <label>Recovery Question</label>
+      <input type="text" id="setup-question" placeholder="e.g. What is your favorite subject?">
+    </div>
+    <div class="auth-field">
+      <label>Recovery Answer</label>
+      <input type="text" id="setup-answer" placeholder="Your answer" autocomplete="off" onkeydown="if(event.key==='Enter')doSetup()">
+      <div class="hint">You'll need this exact answer if you ever forget your password.</div>
+    </div>
+    <button class="auth-btn" id="setup-btn" onclick="doSetup()">Save & Continue</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     ENTER PASSWORD (normal login)
+════════════════════════════════════════════ -->
+<div class="auth-screen" id="screen-login">
+  <div class="auth-card">
+    <div class="auth-logo"><i class="ti ti-bolt"></i><span>DayFlow</span></div>
+    <div class="auth-sub">Enter Password</div>
+    <div class="auth-error" id="login-error"></div>
+    <div class="auth-field">
+      <label>Password</label>
+      <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password" autofocus onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="auth-btn" id="login-btn" onclick="doLogin()">Login</button>
+    <div class="auth-switch"><a onclick="showAuthScreen('forgot')">Forgot Password?</a></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     FORGOT PASSWORD — show recovery question
+════════════════════════════════════════════ -->
+<div class="auth-screen" id="screen-forgot">
+  <div class="auth-card">
+    <div class="auth-logo"><i class="ti ti-lock-question"></i><span>DayFlow</span></div>
+    <div class="auth-sub">Recover Your Password</div>
+    <div class="auth-error" id="forgot-error"></div>
+    <div class="auth-field">
+      <label id="forgot-question-label">Recovery Question</label>
+      <input type="text" id="forgot-answer" placeholder="Your answer" autocomplete="off" onkeydown="if(event.key==='Enter')doCheckRecoveryAnswer()">
+    </div>
+    <button class="auth-btn" id="forgot-btn" onclick="doCheckRecoveryAnswer()">Verify Answer</button>
+    <div class="auth-switch">Remembered it? <a onclick="showAuthScreen('login')">Back to login</a></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     RESET PASSWORD (after correct recovery answer)
+════════════════════════════════════════════ -->
+<div class="auth-screen" id="screen-resetpw">
+  <div class="auth-card">
+    <div class="auth-logo"><i class="ti ti-key"></i><span>DayFlow</span></div>
+    <div class="auth-sub">Set a New Password</div>
+    <div class="auth-error" id="resetpw-error"></div>
+    <div class="auth-success" id="resetpw-success"></div>
+    <div class="auth-field">
+      <label>New Password</label>
+      <input type="password" id="resetpw-new" placeholder="Minimum 8 characters" autocomplete="new-password">
+    </div>
+    <div class="auth-field">
+      <label>Confirm New Password</label>
+      <input type="password" id="resetpw-confirm" placeholder="Re-enter new password" autocomplete="new-password" onkeydown="if(event.key==='Enter')doResetPassword()">
+    </div>
+    <button class="auth-btn" id="resetpw-btn" onclick="doResetPassword()">Update Password</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     APP (DASHBOARD) — shown after login
+════════════════════════════════════════════ -->
+<div class="app" id="app-root" style="display:none">
+
+  <!-- MODALS -->
+  <div class="modal-overlay" id="modal-date">
+    <div class="modal">
+      <h3><i class="ti ti-calendar-event" style="color:var(--accent)"></i>Jump to date</h3>
+      <label>Select date</label><input type="date" id="date-picker-inp">
+      <div class="modal-btns"><button class="btn" onclick="closeModal('modal-date')">Cancel</button><button class="btn primary" onclick="confirmDateJump()">Go to date</button></div>
+    </div>
+  </div>
+  <div class="modal-overlay" id="modal-task">
+    <div class="modal">
+      <h3><i class="ti ti-tag" style="color:var(--accent)"></i>Select category</h3>
+      <p style="font-size:12px;color:var(--text2);margin-bottom:8px" id="modal-task-name"></p>
+      <div class="cat-grid" id="modal-cat-grid"></div>
+      <div class="modal-btns"><button class="btn" onclick="closeModal('modal-task')">Cancel</button></div>
+    </div>
+  </div>
+  <div class="modal-overlay" id="modal-archive-popup">
+    <div class="modal" style="width:430px">
+      <h3><i class="ti ti-archive" style="color:var(--accent)"></i>Task archive</h3>
+      <div style="display:flex;gap:7px;margin-bottom:9px">
+        <input type="text" id="arch-search" placeholder="Search…" oninput="renderArchiveModal()" style="flex:1;background:var(--bg3);border:1px solid var(--border);color:var(--text);font-family:var(--font);font-size:13px;padding:6px 10px;border-radius:var(--radius-sm);outline:none">
+        <select id="arch-cat" onchange="renderArchiveModal()" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);font-family:var(--font);font-size:12px;padding:6px;border-radius:var(--radius-sm);outline:none"><option value="">All</option></select>
+      </div>
+      <div id="arch-modal-list" style="max-height:300px;overflow-y:auto"></div>
+      <div class="modal-btns"><button class="btn" onclick="closeModal('modal-archive-popup')">Close</button></div>
+    </div>
+  </div>
+  <div class="modal-overlay" id="modal-countdown">
+    <div class="modal">
+      <h3><i class="ti ti-alarm" style="color:var(--amber)"></i>Set exam countdown</h3>
+      <label>Exam name</label><input type="text" id="cd-name" placeholder="e.g. NEET 2027">
+      <label>Exam date</label><input type="date" id="cd-date">
+      <div class="modal-btns"><button class="btn" onclick="closeModal('modal-countdown')">Cancel</button><button class="btn primary" onclick="saveCountdown()">Save</button></div>
+    </div>
+  </div>
+  <div class="modal-overlay" id="modal-changepass">
+    <div class="modal">
+      <h3><i class="ti ti-key" style="color:var(--accent)"></i>Change Password</h3>
+      <div class="auth-error" id="changepass-error"></div>
+      <div class="auth-success" id="changepass-success"></div>
+      <label>Current Password</label><input type="password" id="cp-current">
+      <label>New Password</label><input type="password" id="cp-new" placeholder="Minimum 8 characters">
+      <label>Confirm New Password</label><input type="password" id="cp-confirm">
+      <div class="modal-btns"><button class="btn" onclick="closeModal('modal-changepass')">Cancel</button><button class="btn primary" onclick="doChangePassword()">Update Password</button></div>
+    </div>
+  </div>
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sb-logo"><h1><i class="ti ti-bolt"></i>DayFlow</h1></div>
+    <div class="ws-bar">
+      <button class="ws-btn neet active" id="ws-neet" onclick="switchWs('neet')">⚕ NEET</button>
+      <button class="ws-btn ssc" id="ws-ssc" onclick="switchWs('ssc')">📋 SSC</button>
+    </div>
+    <div class="sb-nav">
+      <div class="nav-sec">Daily</div>
+      <button class="nav-btn active" onclick="setView('day')" id="nav-day"><i class="ti ti-calendar-day"></i>Today</button>
+      <button class="nav-btn" onclick="setView('archive')" id="nav-archive"><i class="ti ti-archive"></i>Task archive</button>
+      <div class="nav-sec">Habits</div>
+      <button class="nav-btn" onclick="setView('habits')" id="nav-habits"><i class="ti ti-repeat"></i>Manage habits</button>
+      <div class="nav-sec">Analytics</div>
+      <button class="nav-btn" onclick="setView('analytics')" id="nav-analytics"><i class="ti ti-chart-bar"></i>Analytics</button>
+      <div class="nav-sec">Syllabus</div>
+      <button class="nav-btn" onclick="setView('syllabus')" id="nav-syllabus"><i class="ti ti-book"></i>Syllabus tracker</button>
+      <div class="nav-sec">Navigate</div>
+      <button class="nav-btn" onclick="gotoToday()"><i class="ti ti-home"></i>Jump to today</button>
+      <button class="nav-btn" onclick="openModal('modal-date')"><i class="ti ti-calendar-event"></i>Jump to date</button>
+      <div class="nav-sec">Account</div>
+      <button class="nav-btn" onclick="setView('account')" id="nav-account"><i class="ti ti-user-circle"></i>Login Control</button>
+    </div>
+    <div class="sb-sync">
+      <span class="dot" id="sync-dot"></span>
+      <span id="sync-label">Synced</span>
+    </div>
+  </div>
+
+  <div class="main">
+    <!-- EXAM HEADER -->
+    <div class="exam-header">
+      <div style="flex-shrink:0">
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">Workspace</div>
+        <div id="ws-badge-label" style="font-size:13px;font-weight:700;color:var(--accent)">NEET</div>
+      </div>
+      <div class="exam-center">
+        <div class="exam-name" id="exam-name-lbl">SET YOUR EXAM</div>
+        <div class="exam-days"><span id="exam-days-num">—</span><span class="exam-days-label" id="exam-days-text">days left</span></div>
+        <div class="exam-target" id="exam-target-lbl">Click "Set exam" to configure</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">
+        <div class="exam-meta">
+          <div class="exam-meta-item"><div class="v" id="eh-weeks">—</div><div class="l">weeks</div></div>
+          <div class="exam-meta-item"><div class="v" id="eh-months">—</div><div class="l">months</div></div>
+        </div>
+        <button class="exam-set-btn" onclick="openCdModal()"><i class="ti ti-settings" style="font-size:10px;margin-right:3px"></i>Set exam</button>
+      </div>
+    </div>
+
+    <!-- DATE TOPBAR -->
+    <div class="topbar">
+      <div class="date-nav">
+        <button class="arrow-btn" onclick="shiftDate(-1)" title="Previous day"><i class="ti ti-arrow-left"></i></button>
+        <div><div class="date-main" id="date-main-lbl"></div><div class="date-rel" id="date-rel-lbl"></div></div>
+        <button class="arrow-btn" onclick="shiftDate(1)" title="Next day"><i class="ti ti-arrow-right"></i></button>
+        <button class="btn today-btn sm" id="today-btn" onclick="gotoToday()" style="display:none"><i class="ti ti-home"></i>Today</button>
+      </div>
+      <div class="score-ring">
+        <svg width="46" height="46" viewBox="0 0 46 46"><circle cx="23" cy="23" r="18" fill="none" stroke="var(--bg4)" stroke-width="4"/><circle cx="23" cy="23" r="18" fill="none" stroke="var(--accent)" stroke-width="4" stroke-linecap="round" id="score-arc" stroke-dasharray="0 113"/></svg>
+        <span class="sv" id="score-val">0%</span>
+      </div>
+    </div>
+
+    <!-- DAY VIEW -->
+    <div class="view active" id="view-day">
+      <div class="content">
+        <div class="stats-grid">
+          <div class="stat-card"><div class="stat-val" id="sv-tasks" style="color:var(--accent)">0/0</div><div class="stat-lbl">Tasks done</div><div class="pct-bar"><div class="pct-fill" id="pb-tasks" style="background:var(--accent);width:0%"></div></div></div>
+          <div class="stat-card"><div class="stat-val" id="sv-tpct">0%</div><div class="stat-lbl">Task rate</div></div>
+          <div class="stat-card"><div class="stat-val" id="sv-habits" style="color:var(--green)">0/0</div><div class="stat-lbl">Habits done</div><div class="pct-bar"><div class="pct-fill" id="pb-habits" style="background:var(--green);width:0%"></div></div></div>
+          <div class="stat-card"><div class="stat-val" id="sv-hpct">0%</div><div class="stat-lbl">Habit rate</div></div>
+        </div>
+        <div class="sec-card">
+          <div class="sec-head">
+            <h2><span class="sec-head-icon blue"><i class="ti ti-checkbox"></i></span>Today's Tasks</h2>
+            <button class="btn sm" onclick="openArchivePopup()" style="color:#06b6d4;border-color:rgba(6,182,212,0.3);background:rgba(6,182,212,0.08)"><i class="ti ti-archive"></i>From archive</button>
+          </div>
+          <div class="sec-body" id="task-list"></div>
+        </div>
+        <div class="sec-card">
+          <div class="sec-head">
+            <h2><span class="sec-head-icon green"><i class="ti ti-repeat"></i></span>Daily Habits</h2>
+            <span style="font-size:11px;color:var(--text3);display:flex;align-items:center;gap:4px"><i class="ti ti-infinity" style="font-size:12px;color:var(--green)"></i>Recurring</span>
+          </div>
+          <div class="sec-body" id="habit-list-day"></div>
+        </div>
+        <div class="sec-card">
+          <div class="sec-head">
+            <h2><span class="sec-head-icon amber"><i class="ti ti-notes"></i></span>Daily Notes</h2>
+            <span style="font-size:11px;color:var(--text3)" id="notes-saved"></span>
+          </div>
+          <div class="sec-body"><textarea class="notes-area" id="notes-area" rows="5" placeholder="Write anything — what you studied, how you felt, what needs attention tomorrow…"></textarea></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HABITS VIEW -->
+    <div class="view" id="view-habits">
+      <div class="content">
+        <div class="sec-card">
+          <div class="sec-head"><h2><span class="sec-head-icon green"><i class="ti ti-repeat"></i></span>Manage Habits</h2></div>
+          <div class="sec-body">
+            <p style="font-size:12px;color:var(--text2);margin-bottom:12px">Habits appear every day automatically.</p>
+            <div id="habit-mgmt-list"></div>
+            <div class="add-task-row" style="margin-top:10px"><input type="text" id="new-habit-inp" placeholder="New habit name…" onkeydown="if(event.key==='Enter')addHabit()"><button class="btn primary sm" onclick="addHabit()"><i class="ti ti-plus"></i>Add</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ARCHIVE VIEW -->
+    <div class="view" id="view-archive">
+      <div class="content">
+        <div class="sec-card">
+          <div class="sec-head"><h2><span class="sec-head-icon cyan"><i class="ti ti-archive"></i></span>Task Archive</h2></div>
+          <div class="sec-body">
+            <div style="display:flex;gap:7px;margin-bottom:11px">
+              <input type="text" id="main-arch-search" placeholder="Search…" oninput="renderFullArchive()" style="flex:1;background:var(--bg3);border:1px solid var(--border);color:var(--text);font-family:var(--font);font-size:13px;padding:6px 10px;border-radius:var(--radius-sm);outline:none">
+              <select id="main-arch-cat" onchange="renderFullArchive()" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);font-family:var(--font);font-size:12px;padding:6px;border-radius:var(--radius-sm);outline:none"><option value="">All</option></select>
+              <select id="main-arch-sort" onchange="renderFullArchive()" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);font-family:var(--font);font-size:12px;padding:6px;border-radius:var(--radius-sm);outline:none"><option value="newest">Newest</option><option value="oldest">Oldest</option></select>
+            </div>
+            <div id="main-archive-list"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ANALYTICS VIEW -->
+    <div class="view" id="view-analytics">
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="setATab('daily')" id="atab-daily">Daily</button>
+        <button class="tab-btn" onclick="setATab('weekly')" id="atab-weekly">Weekly</button>
+        <button class="tab-btn" onclick="setATab('monthly')" id="atab-monthly">Monthly</button>
+        <button class="tab-btn" onclick="setATab('yearly')" id="atab-yearly">Yearly</button>
+        <button class="tab-btn" onclick="setATab('alltime')" id="atab-alltime">All Time</button>
+      </div>
+      <div class="content" id="analytics-content"></div>
+    </div>
+
+    <!-- SYLLABUS VIEW -->
+    <div class="view" id="view-syllabus">
+      <div class="content">
+        <div class="syll-layout">
+          <div class="syll-nav" id="syll-nav-container"></div>
+          <div class="syll-content" id="syll-content-container"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ACCOUNT VIEW -->
+    <div class="view" id="view-account">
+      <div class="content">
+        <div class="sec-card">
+          <div class="sec-head"><h2><span class="sec-head-icon purple"><i class="ti ti-user-circle"></i></span>Login Control</h2></div>
+          <div class="sec-body">
+            <div class="acct-card" style="margin-bottom:0">
+              <div class="acct-row"><span class="acct-label"><i class="ti ti-shield-lock" style="margin-right:6px"></i>App Lock</span><span class="acct-value" style="color:var(--green)">Active</span></div>
+              <div class="acct-row"><span class="acct-label"><i class="ti ti-help-circle" style="margin-right:6px"></i>Recovery Question</span><span class="acct-value" id="acct-recovery-q" style="font-weight:500;font-size:12px;max-width:220px;text-align:right">—</span></div>
+              <div class="acct-row"><span class="acct-label"><i class="ti ti-clock" style="margin-right:6px"></i>Password Last Changed</span><span class="acct-value" id="acct-lastlogin">—</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="sec-card">
+          <div class="sec-head"><h2><span class="sec-head-icon blue"><i class="ti ti-settings"></i></span>Account Actions</h2></div>
+          <div class="sec-body" style="display:flex;flex-direction:column;gap:8px">
+            <button class="btn" onclick="openModal('modal-changepass')" style="justify-content:flex-start"><i class="ti ti-key"></i>Change Password</button>
+            <button class="btn danger" onclick="doLogout()" style="justify-content:flex-start"><i class="ti ti-logout"></i>Logout</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════
+// CONFIG & SUPABASE CLIENT
+// ════════════════════════════════════════════════════════════
+const SUPABASE_URL = 'https://hfnshmquawyqgcfqtimk.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_9q843dgjWy4KHvt1VPALFw_1K7gs-hf';
+
+// ── Hidden service account ──────────────────────────────────
+// This is the single real Supabase Auth account behind the app.
+// It is used only to establish a session so RLS-protected
+// tables (tasks, habits, syllabus, etc.) work exactly as
+// before. The custom password screens below are a separate
+// lock layered on top — all dashboard data, sync, and RLS
+// continue to work unchanged, tied to this one account.
+//
+// IMPORTANT: set these to YOUR verified Supabase Auth account
+// email + password (the kumarrohit20803@gmail.com account,
+// once verified via the email Supabase already sent, works for
+// this).
+const SERVICE_EMAIL = 'kumarrohit20803@gmail.com';
+const SERVICE_PASSWORD = 'REPLACE_WITH_YOUR_SUPABASE_ACCOUNT_PASSWORD';
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false }
+});
+
+let currentUser = null;   // hidden Supabase auth user (data session)
+let appLockRow = null;    // { password_hash, password_salt, recovery_question, recovery_answer_hash, recovery_answer_salt, updated_at }
+
+// ════════════════════════════════════════════════════════════
+// AUTH SCREEN HELPERS
+// ════════════════════════════════════════════════════════════
+const ALL_AUTH_SCREENS = ['loading','setup','login','forgot','resetpw'];
+function showAuthScreen(name){
+  ALL_AUTH_SCREENS.forEach(s=>document.getElementById('screen-'+s).classList.toggle('active', s===name));
+  document.getElementById('app-root').style.display='none';
+  document.querySelectorAll('.auth-error').forEach(e=>{e.classList.remove('show');e.textContent=''});
+  document.querySelectorAll('.auth-success').forEach(e=>{e.classList.remove('show');e.textContent=''});
+  if(name==='forgot'){
+    document.getElementById('forgot-question-label').textContent = appLockRow?.recovery_question || 'Recovery Question';
+    document.getElementById('forgot-answer').value='';
+  }
+  if(name==='login'){
+    const pw=document.getElementById('login-password'); if(pw){ pw.value=''; setTimeout(()=>pw.focus(),50); }
+  }
+}
+function showError(id,msg){const el=document.getElementById(id);el.textContent=msg;el.classList.add('show')}
+function showSuccess(id,msg){const el=document.getElementById(id);el.textContent=msg;el.classList.add('show')}
+function hideMsg(id){const el=document.getElementById(id);el.classList.remove('show');el.textContent=''}
+
+function friendlyAuthError(e, fallback){
+  if(e instanceof TypeError && /fetch/i.test(e.message)){
+    return 'Could not connect to Supabase. Check your internet connection, and make sure SUPABASE_URL is correct and the project is not paused.';
+  }
+  return (e && e.message) ? e.message : fallback;
+}
+
+// ════════════════════════════════════════════════════════════
+// HASHING — SHA-256 with random salt via Web Crypto
+// ════════════════════════════════════════════════════════════
+function bufToHex(buf){
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+function randomSaltHex(len=16){
+  const arr = new Uint8Array(len);
+  crypto.getRandomValues(arr);
+  return bufToHex(arr);
+}
+async function hashWithSalt(text, saltHex){
+  const enc = new TextEncoder();
+  const data = enc.encode(saltHex + ':' + text);
+  const digest = await crypto.subtle.digest('SHA-256', data);
+  return bufToHex(digest);
+}
+async function makeHash(text){
+  const salt = randomSaltHex();
+  const hash = await hashWithSalt(text, salt);
+  return { hash, salt };
+}
+async function verifyHash(text, hash, salt){
+  const check = await hashWithSalt(text, salt);
+  return check === hash;
+}
+
+// ════════════════════════════════════════════════════════════
+// APP LOCK — read / write the singleton app_lock row
+// ════════════════════════════════════════════════════════════
+async function loadAppLock(){
+  const { data, error } = await sb.from('app_lock').select('*').eq('id',1).maybeSingle();
+  if(error){
+    console.error('loadAppLock error', error);
+    throw new Error('Could not reach the database (' + (error.message||'unknown error') + '). Check your internet connection and Supabase URL.');
+  }
+  appLockRow = data || null;
+  return appLockRow;
+}
+
+// ── FIRST-TIME SETUP: create password + recovery Q&A ──
+async function doSetup(){
+  hideMsg('setup-error');
+  const pass = document.getElementById('setup-password').value;
+  const pass2 = document.getElementById('setup-password2').value;
+  const question = document.getElementById('setup-question').value.trim();
+  const answer = document.getElementById('setup-answer').value.trim();
+  const btn = document.getElementById('setup-btn');
+
+  if(pass.length < 8){ showError('setup-error','Password must be at least 8 characters.'); return; }
+  if(pass !== pass2){ showError('setup-error','Passwords do not match.'); return; }
+  if(!question){ showError('setup-error','Please enter a recovery question.'); return; }
+  if(!answer){ showError('setup-error','Please enter a recovery answer.'); return; }
+
+  btn.disabled=true; btn.textContent='Saving...';
+  try{
+    const pw = await makeHash(pass);
+    const ans = await makeHash(answer.toLowerCase());
+    const row = {
+      id: 1,
+      password_hash: pw.hash, password_salt: pw.salt,
+      recovery_question: question,
+      recovery_answer_hash: ans.hash, recovery_answer_salt: ans.salt
+    };
+    const { data, error } = await sb.from('app_lock').upsert(row, { onConflict:'id' }).select().single();
+    if(error){ showError('setup-error', error.message); btn.disabled=false; btn.textContent='Save & Continue'; return; }
+    appLockRow = data;
+    document.getElementById('setup-password').value='';
+    document.getElementById('setup-password2').value='';
+    document.getElementById('setup-answer').value='';
+    await enterApp();
+  }catch(e){
+    console.error(e); showError('setup-error', friendlyAuthError(e,'Something went wrong. Please try again.'));
+    btn.disabled=false; btn.textContent='Save & Continue';
+  }
+}
+
+// ── NORMAL LOGIN: check entered password against stored hash ──
+async function doLogin(){
+  hideMsg('login-error');
+  const pass = document.getElementById('login-password').value;
+  const btn = document.getElementById('login-btn');
+  if(!pass){ showError('login-error','Please enter your password.'); return; }
+
+  btn.disabled=true; btn.textContent='Checking...';
+  try{
+    if(!appLockRow){ await loadAppLock(); }
+    if(!appLockRow){ showError('login-error','No password configured. Please refresh the page.'); btn.disabled=false; btn.textContent='Login'; return; }
+
+    const ok = await verifyHash(pass, appLockRow.password_hash, appLockRow.password_salt);
+    btn.disabled=false; btn.textContent='Login';
+    if(!ok){ showError('login-error','Incorrect Password'); return; }
+
+    document.getElementById('login-password').value='';
+    await enterApp();
+  }catch(e){
+    console.error(e); showError('login-error', friendlyAuthError(e,'Something went wrong. Please try again.'));
+    btn.disabled=false; btn.textContent='Login';
+  }
+}
+
+// ── FORGOT PASSWORD: verify recovery answer ──
+async function doCheckRecoveryAnswer(){
+  hideMsg('forgot-error');
+  const answer = document.getElementById('forgot-answer').value.trim();
+  const btn = document.getElementById('forgot-btn');
+  if(!answer){ showError('forgot-error','Please enter your answer.'); return; }
+
+  btn.disabled=true; btn.textContent='Checking...';
+  try{
+    if(!appLockRow){ await loadAppLock(); }
+    const ok = await verifyHash(answer.toLowerCase(), appLockRow.recovery_answer_hash, appLockRow.recovery_answer_salt);
+    btn.disabled=false; btn.textContent='Verify Answer';
+    if(!ok){ showError('forgot-error','Incorrect answer. Please try again.'); return; }
+    document.getElementById('forgot-answer').value='';
+    showAuthScreen('resetpw');
+  }catch(e){
+    console.error(e); showError('forgot-error', friendlyAuthError(e,'Something went wrong. Please try again.'));
+    btn.disabled=false; btn.textContent='Verify Answer';
+  }
+}
+
+// ── RESET PASSWORD: after correct recovery answer ──
+async function doResetPassword(){
+  hideMsg('resetpw-error'); hideMsg('resetpw-success');
+  const nw = document.getElementById('resetpw-new').value;
+  const conf = document.getElementById('resetpw-confirm').value;
+  const btn = document.getElementById('resetpw-btn');
+  if(nw.length < 8){ showError('resetpw-error','Password must be at least 8 characters.'); return; }
+  if(nw !== conf){ showError('resetpw-error','Passwords do not match.'); return; }
+
+  btn.disabled=true; btn.textContent='Updating...';
+  try{
+    const pw = await makeHash(nw);
+    const { data, error } = await sb.from('app_lock').update({
+      password_hash: pw.hash, password_salt: pw.salt
+    }).eq('id',1).select().single();
+    if(error){ showError('resetpw-error', error.message); btn.disabled=false; btn.textContent='Update Password'; return; }
+    appLockRow = data;
+    document.getElementById('resetpw-new').value='';
+    document.getElementById('resetpw-confirm').value='';
+    showSuccess('resetpw-success','Password updated! Redirecting to login...');
+    btn.textContent='Update Password'; btn.disabled=false;
+    setTimeout(()=>showAuthScreen('login'), 1500);
+  }catch(e){
+    showError('resetpw-error', friendlyAuthError(e,'Something went wrong.'));
+    btn.disabled=false; btn.textContent='Update Password';
+  }
+}
+
+// ── CHANGE PASSWORD (from Login Control page, inside the app) ──
+async function doChangePassword(){
+  hideMsg('changepass-error'); hideMsg('changepass-success');
+  const cur = document.getElementById('cp-current').value;
+  const nw = document.getElementById('cp-new').value;
+  const conf = document.getElementById('cp-confirm').value;
+  if(nw.length < 8){ showError('changepass-error','New password must be at least 8 characters.'); return; }
+  if(nw !== conf){ showError('changepass-error','New passwords do not match.'); return; }
+
+  try{
+    if(!appLockRow){ await loadAppLock(); }
+    const ok = await verifyHash(cur, appLockRow.password_hash, appLockRow.password_salt);
+    if(!ok){ showError('changepass-error','Current password is incorrect.'); return; }
+
+    const pw = await makeHash(nw);
+    const { data, error } = await sb.from('app_lock').update({
+      password_hash: pw.hash, password_salt: pw.salt
+    }).eq('id',1).select().single();
+    if(error){ showError('changepass-error', error.message); return; }
+    appLockRow = data;
+
+    document.getElementById('cp-current').value='';
+    document.getElementById('cp-new').value='';
+    document.getElementById('cp-confirm').value='';
+    showSuccess('changepass-success','Password updated successfully.');
+    renderAccountPage();
+    setTimeout(()=>closeModal('modal-changepass'), 1200);
+  }catch(e){
+    showError('changepass-error', friendlyAuthError(e,'Something went wrong. Please try again.'));
+  }
+}
+
+// ── LOGOUT: return to the lock screen (the underlying data
+//    session stays signed in to the hidden service account) ──
+function doLogout(){
+  showAuthScreen('login');
+}
+
+// ════════════════════════════════════════════════════════════
+// ENTER APP — called after successful setup/login
+// ════════════════════════════════════════════════════════════
+async function enterApp(){
+  showAuthScreen('loading');
+  document.getElementById('app-root').style.display='flex';
+  ALL_AUTH_SCREENS.forEach(s=>document.getElementById('screen-'+s).classList.remove('active'));
+  await initApp();
+  renderAccountPage();
+}
+
+// ════════════════════════════════════════════════════════════
+// ACCOUNT PAGE (Login Control)
+// ════════════════════════════════════════════════════════════
+function renderAccountPage(){
+  if(!appLockRow) return;
+  const qEl = document.getElementById('acct-recovery-q');
+  const lEl = document.getElementById('acct-lastlogin');
+  if(qEl) qEl.textContent = appLockRow.recovery_question || '—';
+  if(lEl) lEl.textContent = appLockRow.updated_at ? new Date(appLockRow.updated_at).toLocaleString('en-IN',{dateStyle:'medium',timeStyle:'short'}) : '—';
+}
+
+// ════════════════════════════════════════════════════════════
+// STARTUP SEQUENCE
+//  1. Sign in to the hidden service account (silent, for RLS)
+//  2. Load the app_lock row
+//  3. No row -> show "Create Your Password" (first-time setup)
+//     Row exists -> show "Enter Password"
+// ════════════════════════════════════════════════════════════
+(async function startup(){
+  try{
+    const { data: { session } } = await sb.auth.getSession();
+    if(!session){
+      const { error: signinErr } = await sb.auth.signInWithPassword({ email: SERVICE_EMAIL, password: SERVICE_PASSWORD });
+      if(signinErr){
+        console.error('service account sign-in failed', signinErr);
+        showAuthScreen('login');
+        showError('login-error','App backend is not configured correctly (service account sign-in failed). Contact the app owner.');
+        return;
+      }
+    }
+    currentUser = (await sb.auth.getUser()).data.user;
+
+    await loadAppLock();
+    if(!appLockRow){
+      showAuthScreen('setup');
+    } else {
+      showAuthScreen('login');
+    }
+  }catch(e){
+    console.error(e);
+    showAuthScreen('login');
+    showError('login-error', friendlyAuthError(e,'Something went wrong while starting up.'));
+  }
+})();
+</script>
+
+<script>
+// ════════════════════════════════════════════════════════════
+// SYLLABUS DEFAULT DATA
+// (used to seed syllabus_subjects + syllabus_chapters on first load)
+// ════════════════════════════════════════════════════════════
+const NEET_DEFAULT_COLUMNS = [
+  {id:'lectures',label:'Lecture'},{id:'notes',label:'Notes'},{id:'dpp',label:'DPP'},
+  {id:'module',label:'Module'},{id:'pyq',label:'PYQ'},{id:'extra_module',label:'Extra Module'},
+  {id:'revision_1',label:'Revision 1'},{id:'revision_2',label:'Revision 2'},{id:'revision_3',label:'Revision 3'}
+];
+const SSC_DEFAULT_COLUMNS = [
+  {id:'theory',label:'Theory'},{id:'practice',label:'Practice'},{id:'pyq',label:'PYQ'},
+  {id:'revision_1',label:'Revision 1'},{id:'revision_2',label:'Revision 2'},{id:'revision_3',label:'Revision 3'}
+];
+
+const PHYSICS_CHAPTERS=[
+  'Mathematical Tools','Units & Dimensions','Motion in a Straight Line','Motion in a Plane',
+  'Laws of Motion','Work, Energy and Power','System of Particles and Rotational Motion',
+  'Gravitation','Mechanical Properties of Solids','Mechanical Properties of Fluids',
+  'Thermal Properties of Matter','Thermodynamics','Kinetic Theory','Oscillations','Waves',
+  'Electric Charges and Fields','Electrostatic Potential and Capacitance','Current Electricity',
+  'Moving Charges and Magnetism','Magnetism and Matter','Electromagnetic Induction',
+  'Alternating Current','Electromagnetic Waves','Ray Optics and Optical Instruments',
+  'Wave Optics','Dual Nature of Radiation and Matter','Atoms','Nuclei',
+  'Semiconductor Electronics','Experiment Skills in Physics'
+];
+const CHEMISTRY_CHAPTERS=[
+  'Some Basic Concepts of Chemistry','Structure of Atom',
+  'Classification of Elements and Periodicity in Properties',
+  'Chemical Bonding and Molecular Structure','Thermodynamics','Equilibrium',
+  'Redox Reactions','The p-Block Elements (Group 13-14)',
+  'Organic Chemistry - Basic Principles and Techniques','Hydrocarbons',
+  'Solutions','Electrochemistry','Chemical Kinetics',
+  'The p-Block Elements (Group 15-18)','The d- and f-Block Elements',
+  'Coordination Compounds','Haloalkanes and Haloarenes',
+  'Alcohols, Phenols and Ethers','Aldehydes, Ketones and Carboxylic Acids',
+  'Amines','Biomolecules','Principles Related to Practical Chemistry'
+];
+// Biology = Botany + Zoology combined into ONE ordered list
+const BIOLOGY_CHAPTERS=[
+  'The Living World','Biological Classification','Plant Kingdom','Animal Kingdom',
+  'Morphology of Flowering Plants','Anatomy of Flowering Plants',
+  'Structural Organisation in Animals',
+  'Cell: The Unit of Life','Biomolecules','Cell Cycle and Cell Division',
+  'Photosynthesis in Higher Plants','Respiration in Plants','Plant Growth and Development',
+  'Breathing and Exchange of Gases','Body Fluids and Circulation',
+  'Excretory Products and their Elimination','Locomotion and Movement',
+  'Neural Control and Coordination','Chemical Coordination and Integration',
+  'Sexual Reproduction in Flowering Plants','Human Reproduction','Reproductive Health',
+  'Principles of Inheritance and Variation','Molecular Basis of Inheritance','Evolution',
+  'Human Health and Disease','Microbes in Human Welfare',
+  'Biotechnology: Principles and Processes','Biotechnology and its Applications',
+  'Organisms and Populations','Ecosystem','Biodiversity and Conservation'
+];
+const SSC_REASONING_CHAPTERS=[
+  'Analogy','Analogy (Non-Verbal)','Odd One Out','Odd One Out (Non-Verbal)','Coding-Decoding',
+  'Series','Missing Number','Syllogism','Statement & Conclusion','Data Sufficiency',
+  'Blood Relation','Venn Diagram','Cube & Dice','Sitting Arrangement','Direction & Distance',
+  'Arithmetic Progression','Mathematical Operation','Word Arrangement','Ages','Calendar',
+  'Series (Non-Verbal)','Counting of Figures','Paper Cutting & Folding','Embedded Figure',
+  'Figure Completion','Mirror & Water Image','Order & Ranking','Inequality','Word Formation',
+  'Puzzle','Input-Output','Decision Making'
+];
+const SSC_MATHS_CHAPTERS=[
+  'Percentage','Profit & Loss','Discount','Simple Interest','Compound Interest','Ratio',
+  'Proportion','Ages','Partnership','Mixture & Allegation','Average','Time & Work',
+  'Pipe & Cistern','Time, Speed & Distance','Race & Circular Motion','Train','Boat & Stream',
+  'Number System','LCM & HCF','Simplification','Algebra','Trigonometry','Height & Distance',
+  'Geometry','Coordinate Geometry','Mensuration (2D & 3D)','Statistics',
+  'Permutation & Combination','Probability','Data Interpretation'
+];
+
+// Default subject definitions per workspace: {subject_key, label, emoji, color, columns, chapters}
+const DEFAULT_SUBJECTS = {
+  neet: [
+    {subject_key:'physics', label:'Physics', emoji:'⚛️', color:'#4f8ef7', columns:NEET_DEFAULT_COLUMNS, chapters:PHYSICS_CHAPTERS},
+    {subject_key:'chemistry', label:'Chemistry', emoji:'🧪', color:'#f97316', columns:NEET_DEFAULT_COLUMNS, chapters:CHEMISTRY_CHAPTERS},
+    {subject_key:'biology', label:'Biology', emoji:'🧬', color:'#3ecf6e', columns:NEET_DEFAULT_COLUMNS, chapters:BIOLOGY_CHAPTERS},
+  ],
+  ssc: [
+    {subject_key:'maths', label:'Mathematics', emoji:'🔢', color:'#4f8ef7', columns:SSC_DEFAULT_COLUMNS, chapters:SSC_MATHS_CHAPTERS},
+    {subject_key:'reasoning', label:'Reasoning', emoji:'🧠', color:'#f97316', columns:SSC_DEFAULT_COLUMNS, chapters:SSC_REASONING_CHAPTERS},
+  ]
+};
+
+// ════════════════════════════════════════════════════════════
+// WORKSPACES
+// ════════════════════════════════════════════════════════════
+const WS = {
+  neet:{
+    label:'NEET', color:'#4f8ef7', dimColor:'rgba(79,142,247,0.15)',
+    cats:[
+      {id:'physics',   label:'Physics',   emoji:'⚛️', icon:'ti-atom',           color:'#4f8ef7', dim:'rgba(79,142,247,0.18)'},
+      {id:'chemistry', label:'Chemistry', emoji:'🧪', icon:'ti-flask',          color:'#f97316', dim:'rgba(249,115,22,0.18)'},
+      {id:'botany',    label:'Botany',    emoji:'🌿', icon:'ti-plant',          color:'#22c55e', dim:'rgba(34,197,94,0.18)'},
+      {id:'zoology',   label:'Zoology',   emoji:'🐾', icon:'ti-paw',            color:'#f43f5e', dim:'rgba(244,63,94,0.18)'},
+      {id:'revision',  label:'Revision',  emoji:'🔄', icon:'ti-refresh',        color:'#a855f7', dim:'rgba(168,85,247,0.18)'},
+      {id:'test',      label:'Test',      emoji:'📝', icon:'ti-clipboard',      color:'#eab308', dim:'rgba(234,179,8,0.18)'},
+    ]
+  },
+  ssc:{
+    label:'SSC', color:'#a855f7', dimColor:'rgba(168,85,247,0.15)',
+    cats:[
+      {id:'maths',     label:'Mathematics',      emoji:'🔢', icon:'ti-math-function', color:'#4f8ef7', dim:'rgba(79,142,247,0.18)'},
+      {id:'english',   label:'English',          emoji:'📚', icon:'ti-book',          color:'#22c55e', dim:'rgba(34,197,94,0.18)'},
+      {id:'reasoning', label:'Reasoning',        emoji:'🧠', icon:'ti-brain',         color:'#f97316', dim:'rgba(249,115,22,0.18)'},
+      {id:'gkgs',      label:'GK/GS',            emoji:'🌍', icon:'ti-world',         color:'#06b6d4', dim:'rgba(6,182,212,0.18)'},
+      {id:'revision',  label:'Revision',         emoji:'🔄', icon:'ti-refresh',       color:'#a855f7', dim:'rgba(168,85,247,0.18)'},
+      {id:'test',      label:'Test',             emoji:'📝', icon:'ti-clipboard',     color:'#eab308', dim:'rgba(234,179,8,0.18)'},
+      {id:'practice',  label:'Question Practice',emoji:'✍️', icon:'ti-pencil',        color:'#f43f5e', dim:'rgba(244,63,94,0.18)'},
+    ]
+  }
+};
+
+// ════════════════════════════════════════════════════════════
+// SYNC STATUS INDICATOR
+// ════════════════════════════════════════════════════════════
+function setSyncStatus(state){ // 'synced' | 'syncing' | 'error'
+  const dot = document.getElementById('sync-dot');
+  const label = document.getElementById('sync-label');
+  if(!dot) return;
+  dot.className = 'dot' + (state==='syncing'?' syncing':state==='error'?' error':'');
+  label.textContent = state==='syncing'?'Syncing…':state==='error'?'Sync error':'Synced';
+}
+
+// ════════════════════════════════════════════════════════════
+// IN-MEMORY CACHE (populated from Supabase, mutated locally,
+// then pushed to Supabase on every change)
+// ════════════════════════════════════════════════════════════
+const cache = {
+  neet: { tasks:{}, habits:[], habitChecks:{}, notes:{}, archive:[], settings:{}, syllSubjects:[], syllChapters:{}, syllProgress:{} },
+  ssc:  { tasks:{}, habits:[], habitChecks:{}, notes:{}, archive:[], settings:{}, syllSubjects:[], syllChapters:{}, syllProgress:{} }
+};
+let cacheLoaded = { neet:false, ssc:false };
+
+// ── Load all data for a workspace from Supabase ──
+async function loadWorkspaceData(workspace){
+  setSyncStatus('syncing');
+  try{
+    const uid = currentUser.id;
+
+    const [tasksRes, habitsRes, checksRes, notesRes, archiveRes, settingsRes] = await Promise.all([
+      sb.from('tasks').select('*').eq('user_id',uid).eq('workspace_type',workspace).order('position',{ascending:true}),
+      sb.from('habits').select('*').eq('user_id',uid).eq('workspace_type',workspace).order('created_at',{ascending:true}),
+      sb.from('habit_checks').select('*').eq('user_id',uid).eq('workspace_type',workspace),
+      sb.from('daily_notes').select('*').eq('user_id',uid).eq('workspace_type',workspace),
+      sb.from('archive_tasks').select('*').eq('user_id',uid).eq('workspace_type',workspace).order('created_at',{ascending:false}),
+      sb.from('settings').select('*').eq('user_id',uid).eq('workspace_type',workspace).maybeSingle()
+    ]);
+
+    const c = cache[workspace];
+
+    // tasks grouped by date
+    c.tasks = {};
+    (tasksRes.data||[]).forEach(t=>{
+      const k = t.date;
+      if(!c.tasks[k]) c.tasks[k]=[];
+      c.tasks[k].push(t);
+    });
+    Object.values(c.tasks).forEach(arr=>arr.sort((a,b)=>a.position-b.position));
+
+    // habits
+    c.habits = habitsRes.data || [];
+
+    // habit checks -> { habitId: { dateKey: true } }
+    c.habitChecks = {};
+    (checksRes.data||[]).forEach(hc=>{
+      if(!c.habitChecks[hc.habit_id]) c.habitChecks[hc.habit_id]={};
+      c.habitChecks[hc.habit_id][hc.date] = hc.completed;
+    });
+
+    // notes -> { dateKey: noteText }
+    c.notes = {};
+    (notesRes.data||[]).forEach(n=>{ c.notes[n.date] = n.note; });
+
+    // archive
+    c.archive = archiveRes.data || [];
+
+    // settings
+    c.settings = settingsRes.data || null;
+
+    // syllabus: load subjects/chapters/progress, seeding defaults if empty
+    await loadSyllabusData(workspace);
+
+    cacheLoaded[workspace] = true;
+    setSyncStatus('synced');
+  }catch(e){
+    console.error('loadWorkspaceData error', e);
+    setSyncStatus('error');
+  }
+}
+
+// ── Load syllabus subjects/chapters/progress, seed defaults on first run ──
+async function loadSyllabusData(workspace){
+  const uid = currentUser.id;
+  const c = cache[workspace];
+
+  let { data: subjects } = await sb.from('syllabus_subjects').select('*').eq('user_id',uid).eq('workspace_type',workspace).order('position',{ascending:true});
+
+  if(!subjects || subjects.length===0){
+    // seed defaults
+    const defaults = DEFAULT_SUBJECTS[workspace];
+    const subjectRows = defaults.map((d,i)=>({
+      user_id: uid, workspace_type: workspace, subject_key: d.subject_key,
+      label: d.label, emoji: d.emoji, color: d.color, columns: d.columns, position: i
+    }));
+    const { data: insertedSubjects, error: subjErr } = await sb.from('syllabus_subjects').insert(subjectRows).select();
+    if(subjErr){ console.error('seed subjects error', subjErr); subjects = []; }
+    else subjects = insertedSubjects;
+
+    // seed chapters for each subject
+    const chapterRows = [];
+    defaults.forEach(d=>{
+      d.chapters.forEach((chap,i)=>{
+        chapterRows.push({ user_id: uid, workspace_type: workspace, subject_key: d.subject_key, chapter_name: chap, position: i });
+      });
+    });
+    if(chapterRows.length){
+      const { error: chapErr } = await sb.from('syllabus_chapters').insert(chapterRows);
+      if(chapErr) console.error('seed chapters error', chapErr);
+    }
+  }
+
+  c.syllSubjects = subjects || [];
+
+  const { data: chapters } = await sb.from('syllabus_chapters').select('*').eq('user_id',uid).eq('workspace_type',workspace).order('position',{ascending:true});
+  c.syllChapters = {};
+  (chapters||[]).forEach(ch=>{
+    if(!c.syllChapters[ch.subject_key]) c.syllChapters[ch.subject_key]=[];
+    c.syllChapters[ch.subject_key].push(ch);
+  });
+
+  const { data: progress } = await sb.from('syllabus_progress').select('*').eq('user_id',uid).eq('workspace_type',workspace);
+  c.syllProgress = {};
+  (progress||[]).forEach(p=>{ c.syllProgress[p.chapter_id] = p; });
+}
+
+// ════════════════════════════════════════════════════════════
+// TASKS — CRUD
+// ════════════════════════════════════════════════════════════
+function getTasksForDate(workspace, dateKey){
+  return cache[workspace].tasks[dateKey] || [];
+}
+
+async function addTask(workspace, dateKey, text, category){
+  const list = getTasksForDate(workspace, dateKey);
+  const position = list.length;
+  const row = {
+    user_id: currentUser.id, workspace_type: workspace, date: dateKey,
+    task_name: text, category, completed:false, position
+  };
+  setSyncStatus('syncing');
+  const { data, error } = await sb.from('tasks').insert(row).select().single();
+  if(error){ console.error('addTask error', error); setSyncStatus('error'); return null; }
+  if(!cache[workspace].tasks[dateKey]) cache[workspace].tasks[dateKey]=[];
+  cache[workspace].tasks[dateKey].push(data);
+  setSyncStatus('synced');
+  return data;
+}
+
+async function updateTask(workspace, taskId, fields){
+  setSyncStatus('syncing');
+  const { error } = await sb.from('tasks').update(fields).eq('id', taskId).eq('user_id', currentUser.id);
+  if(error){ console.error('updateTask error', error); setSyncStatus('error'); return false; }
+  // update cache
+  for(const dateKey in cache[workspace].tasks){
+    const arr = cache[workspace].tasks[dateKey];
+    const t = arr.find(x=>x.id===taskId);
+    if(t){ Object.assign(t, fields); break; }
+  }
+  setSyncStatus('synced');
+  return true;
+}
+
+async function deleteTask(workspace, taskId, dateKey){
+  setSyncStatus('syncing');
+  const { error } = await sb.from('tasks').delete().eq('id', taskId).eq('user_id', currentUser.id);
+  if(error){ console.error('deleteTask error', error); setSyncStatus('error'); return false; }
+  cache[workspace].tasks[dateKey] = (cache[workspace].tasks[dateKey]||[]).filter(t=>t.id!==taskId);
+  setSyncStatus('synced');
+  return true;
+}
+
+// reorder: update position for all tasks in the date
+async function reorderTasks(workspace, dateKey){
+  const list = cache[workspace].tasks[dateKey] || [];
+  setSyncStatus('syncing');
+  try{
+    await Promise.all(list.map((t,idx)=>{
+      t.position = idx;
+      return sb.from('tasks').update({position:idx}).eq('id',t.id).eq('user_id',currentUser.id);
+    }));
+    setSyncStatus('synced');
+  }catch(e){ console.error('reorderTasks error', e); setSyncStatus('error'); }
+}
+
+// ════════════════════════════════════════════════════════════
+// HABITS — CRUD
+// ════════════════════════════════════════════════════════════
+async function addHabitDB(workspace, name){
+  setSyncStatus('syncing');
+  const row = { user_id: currentUser.id, workspace_type: workspace, habit_name: name };
+  const { data, error } = await sb.from('habits').insert(row).select().single();
+  if(error){ console.error('addHabit error', error); setSyncStatus('error'); return null; }
+  cache[workspace].habits.push(data);
+  setSyncStatus('synced');
+  return data;
+}
+
+async function deleteHabitDB(workspace, habitId){
+  setSyncStatus('syncing');
+  const { error } = await sb.from('habits').delete().eq('id', habitId).eq('user_id', currentUser.id);
+  if(error){ console.error('deleteHabit error', error); setSyncStatus('error'); return false; }
+  cache[workspace].habits = cache[workspace].habits.filter(h=>h.id!==habitId);
+  delete cache[workspace].habitChecks[habitId];
+  setSyncStatus('synced');
+  return true;
+}
+
+// toggle habit completion for a date
+async function toggleHabitCheck(workspace, habitId, dateKey, completed){
+  setSyncStatus('syncing');
+  const { error } = await sb.from('habit_checks').upsert({
+    user_id: currentUser.id, workspace_type: workspace, habit_id: habitId, date: dateKey, completed
+  }, { onConflict: 'habit_id,date' });
+  if(error){ console.error('toggleHabitCheck error', error); setSyncStatus('error'); return false; }
+  if(!cache[workspace].habitChecks[habitId]) cache[workspace].habitChecks[habitId]={};
+  cache[workspace].habitChecks[habitId][dateKey]=completed;
+  setSyncStatus('synced');
+  return true;
+}
+
+// ════════════════════════════════════════════════════════════
+// DAILY NOTES — CRUD
+// ════════════════════════════════════════════════════════════
+async function saveNote(workspace, dateKey, text){
+  setSyncStatus('syncing');
+  const { error } = await sb.from('daily_notes').upsert({
+    user_id: currentUser.id, workspace_type: workspace, date: dateKey, note: text
+  }, { onConflict: 'user_id,workspace_type,date' });
+  if(error){ console.error('saveNote error', error); setSyncStatus('error'); return false; }
+  cache[workspace].notes[dateKey] = text;
+  setSyncStatus('synced');
+  return true;
+}
+
+// ════════════════════════════════════════════════════════════
+// ARCHIVE TASKS — CRUD
+// ════════════════════════════════════════════════════════════
+async function addArchiveTask(workspace, taskName, category, originalDate, completed){
+  setSyncStatus('syncing');
+  const row = { user_id: currentUser.id, workspace_type: workspace, task_name: taskName, category, original_date: originalDate, completed };
+  const { data, error } = await sb.from('archive_tasks').insert(row).select().single();
+  if(error){ console.error('addArchiveTask error', error); setSyncStatus('error'); return null; }
+  cache[workspace].archive.unshift(data);
+  setSyncStatus('synced');
+  return data;
+}
+
+// ════════════════════════════════════════════════════════════
+// SYLLABUS — CRUD (subjects / chapters / progress)
+// ════════════════════════════════════════════════════════════
+
+// ── Toggle a single progress checkbox ──
+async function setChapterProgress(workspace, chapterId, columnId, value){
+  setSyncStatus('syncing');
+  const existing = cache[workspace].syllProgress[chapterId];
+  const progress = existing ? {...existing.progress} : {};
+  progress[columnId] = value;
+  const row = { user_id: currentUser.id, workspace_type: workspace, chapter_id: chapterId, progress };
+  const { data, error } = await sb.from('syllabus_progress').upsert(row, { onConflict: 'chapter_id' }).select().single();
+  if(error){ console.error('setChapterProgress error', error); setSyncStatus('error'); return false; }
+  cache[workspace].syllProgress[chapterId] = data;
+  setSyncStatus('synced');
+  return true;
+}
+
+// ── Add a new chapter to a subject ──
+async function addChapter(workspace, subjectKey, name){
+  setSyncStatus('syncing');
+  const list = cache[workspace].syllChapters[subjectKey] || [];
+  const position = list.length;
+  const row = { user_id: currentUser.id, workspace_type: workspace, subject_key: subjectKey, chapter_name: name, position };
+  const { data, error } = await sb.from('syllabus_chapters').insert(row).select().single();
+  if(error){ console.error('addChapter error', error); setSyncStatus('error'); return null; }
+  if(!cache[workspace].syllChapters[subjectKey]) cache[workspace].syllChapters[subjectKey]=[];
+  cache[workspace].syllChapters[subjectKey].push(data);
+  setSyncStatus('synced');
+  return data;
+}
+
+// ── Rename a chapter ──
+async function renameChapter(workspace, chapterId, subjectKey, newName){
+  setSyncStatus('syncing');
+  const { error } = await sb.from('syllabus_chapters').update({chapter_name:newName}).eq('id',chapterId).eq('user_id',currentUser.id);
+  if(error){ console.error('renameChapter error', error); setSyncStatus('error'); return false; }
+  const list = cache[workspace].syllChapters[subjectKey]||[];
+  const ch = list.find(c=>c.id===chapterId);
+  if(ch) ch.chapter_name = newName;
+  setSyncStatus('synced');
+  return true;
+}
+
+// ── Delete a chapter ──
+async function deleteChapter(workspace, chapterId, subjectKey){
+  setSyncStatus('syncing');
+  const { error } = await sb.from('syllabus_chapters').delete().eq('id',chapterId).eq('user_id',currentUser.id);
+  if(error){ console.error('deleteChapter error', error); setSyncStatus('error'); return false; }
+  cache[workspace].syllChapters[subjectKey] = (cache[workspace].syllChapters[subjectKey]||[]).filter(c=>c.id!==chapterId);
+  delete cache[workspace].syllProgress[chapterId];
+  setSyncStatus('synced');
+  return true;
+}
+
+// ── Reorder chapters within a subject (full list, new order) ──
+async function reorderChapters(workspace, subjectKey){
+  const list = cache[workspace].syllChapters[subjectKey] || [];
+  setSyncStatus('syncing');
+  try{
+    await Promise.all(list.map((ch,idx)=>{
+      ch.position = idx;
+      return sb.from('syllabus_chapters').update({position:idx}).eq('id',ch.id).eq('user_id',currentUser.id);
+    }));
+    setSyncStatus('synced');
+  }catch(e){ console.error('reorderChapters error', e); setSyncStatus('error'); }
+}
+
+// ── Update a subject's columns array (add/rename/delete/reorder) ──
+async function updateSubjectColumns(workspace, subjectKey, newColumns){
+  setSyncStatus('syncing');
+  const subj = cache[workspace].syllSubjects.find(s=>s.subject_key===subjectKey);
+  if(!subj) return false;
+  const { data, error } = await sb.from('syllabus_subjects').update({columns:newColumns}).eq('id',subj.id).eq('user_id',currentUser.id).select().single();
+  if(error){ console.error('updateSubjectColumns error', error); setSyncStatus('error'); return false; }
+  Object.assign(subj, data);
+  setSyncStatus('synced');
+  return true;
+}
+
+// ════════════════════════════════════════════════════════════
+// SETTINGS (countdown etc.) — CRUD
+// ════════════════════════════════════════════════════════════
+async function saveSettings(workspace, fields){
+  setSyncStatus('syncing');
+  const existing = cache[workspace].settings;
+  const row = existing ? {...existing, ...fields} : { user_id: currentUser.id, workspace_type: workspace, ...fields };
+  const { data, error } = await sb.from('settings').upsert(row, { onConflict: 'user_id,workspace_type' }).select().single();
+  if(error){ console.error('saveSettings error', error); setSyncStatus('error'); return false; }
+  cache[workspace].settings = data;
+  setSyncStatus('synced');
+  return true;
+}
+</script>
+
+<script>
+// ════════════════════════════════════════════════════════════
+// APP STATE
+// ════════════════════════════════════════════════════════════
+let ws='neet', currentDate, currentView='day', currentATab='daily';
+let dragSrc=null, chartInst={}, notesT=null, midnightT=null;
+let pendingText='';
+
+// ════════════════════════════════════════════════════════════
+// UTILS
+// ════════════════════════════════════════════════════════════
+function todayDate(){const d=new Date();return new Date(d.getFullYear(),d.getMonth(),d.getDate())}
+function toKey(d){return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
+function fromKey(k){const p=k.split('-');return new Date(+p[0],+p[1]-1,+p[2])}
+function fmtDate(d){return d.toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}
+function fmtShort(d){return d.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}
+const cats=()=>WS[ws].cats;
+const getCat=id=>cats().find(c=>c.id===id)||cats()[0];
+
+// ════════════════════════════════════════════════════════════
+// MIDNIGHT AUTO-TRANSITION
+// ════════════════════════════════════════════════════════════
+function scheduleMidnight(){
+  clearTimeout(midnightT);
+  const now=new Date();
+  const next=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1,0,0,5);
+  midnightT=setTimeout(()=>{
+    if(toKey(currentDate)===toKey(new Date(now.getFullYear(),now.getMonth(),now.getDate()))){currentDate=todayDate();renderAll()}
+    scheduleMidnight();
+  },next-now);
+}
+
+// ════════════════════════════════════════════════════════════
+// INIT APP
+// ════════════════════════════════════════════════════════════
+async function initApp(){
+  currentDate = todayDate();
+  await switchWs('neet');
+  scheduleMidnight();
+}
+
+// ════════════════════════════════════════════════════════════
+// WORKSPACE SWITCH
+// ════════════════════════════════════════════════════════════
+async function switchWs(newWs){
+  ws=newWs;
+  document.getElementById('ws-neet').classList.toggle('active',newWs==='neet');
+  document.getElementById('ws-ssc').classList.toggle('active',newWs==='ssc');
+  const w=WS[ws];
+  document.getElementById('ws-badge-label').textContent=w.label;
+  document.getElementById('ws-badge-label').style.color=w.color;
+  activeSubjectKey=null;  // reset syllabus selection when switching workspace
+  editTrackerMode=false;
+
+  if(!cacheLoaded[ws]) await loadWorkspaceData(ws);
+
+  renderAll();
+  if(currentView==='analytics')renderAnalytics();
+  else if(currentView==='archive')initFullArchive();
+  else if(currentView==='habits')renderHabitMgmt();
+  else if(currentView==='syllabus')renderSyllabus();
+  else if(currentView==='account')renderAccountPage();
+  setView(currentView);
+}
+
+// ════════════════════════════════════════════════════════════
+// EXAM HEADER (from settings)
+// ════════════════════════════════════════════════════════════
+function renderExamHeader(){
+  const s=cache[ws].settings;
+  if(!s||!s.exam_name||!s.exam_date){
+    document.getElementById('exam-name-lbl').textContent='SET YOUR EXAM';
+    document.getElementById('exam-days-num').textContent='—';
+    document.getElementById('exam-days-text').textContent='days left';
+    document.getElementById('exam-target-lbl').textContent='Click "Set exam" to configure';
+    document.getElementById('eh-weeks').textContent='—';
+    document.getElementById('eh-months').textContent='—';
+    return;
+  }
+  const examDate=new Date(s.exam_date+'T00:00:00');
+  const t=todayDate();
+  const days=Math.max(0,Math.ceil((examDate-t)/86400000));
+  const weeks=Math.floor(days/7);
+  const months=Math.floor(days/30.44);
+  document.getElementById('exam-name-lbl').textContent=s.exam_name.toUpperCase();
+  document.getElementById('exam-days-num').textContent=days;
+  document.getElementById('exam-days-text').textContent=days===1?'day left':'days left';
+  document.getElementById('exam-target-lbl').textContent='Target: '+examDate.toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'});
+  document.getElementById('eh-weeks').textContent=weeks;
+  document.getElementById('eh-months').textContent=months;
+}
+function openCdModal(){
+  const s=cache[ws].settings;
+  document.getElementById('cd-name').value = s?.exam_name || '';
+  document.getElementById('cd-date').value = s?.exam_date || '';
+  openModal('modal-countdown');
+}
+async function saveCountdown(){
+  const name=document.getElementById('cd-name').value.trim();
+  const date=document.getElementById('cd-date').value;
+  if(name&&date){ await saveSettings(ws,{exam_name:name, exam_date:date}); renderExamHeader(); }
+  closeModal('modal-countdown');
+}
+
+// ════════════════════════════════════════════════════════════
+// DATE LABEL + SCORE
+// ════════════════════════════════════════════════════════════
+function renderDateLabel(){
+  const t=todayDate();const diff=Math.round((currentDate-t)/86400000);
+  document.getElementById('date-main-lbl').textContent=fmtDate(currentDate);
+  const rel={0:'Today',1:'Tomorrow','-1':'Yesterday'};
+  document.getElementById('date-rel-lbl').textContent=rel[diff]!==undefined?rel[diff]:diff<0?`${Math.abs(diff)} days ago`:`In ${diff} days`;
+  document.getElementById('today-btn').style.display=diff!==0?'inline-flex':'none';
+}
+
+function renderScore(){
+  const key=toKey(currentDate);
+  const tasks=getTasksForDate(ws,key).filter(t=>t.task_name&&t.task_name.trim());
+  const habits=cache[ws].habits;
+  const td=tasks.filter(t=>t.completed).length;
+  const hd=habits.filter(h=>cache[ws].habitChecks[h.id]&&cache[ws].habitChecks[h.id][key]).length;
+  const total=tasks.length+habits.length;const done=td+hd;
+  const pct=total===0?0:Math.round(done/total*100);
+  const tp=tasks.length===0?0:Math.round(td/tasks.length*100);
+  const hp=habits.length===0?0:Math.round(hd/habits.length*100);
+  document.getElementById('score-val').textContent=pct+'%';
+  const circ=2*Math.PI*18;const arc=circ*pct/100;
+  document.getElementById('score-arc').setAttribute('stroke-dasharray',`${arc.toFixed(1)} ${(circ-arc).toFixed(1)}`);
+  document.getElementById('sv-tasks').textContent=`${td}/${tasks.length}`;
+  document.getElementById('sv-tpct').textContent=tp+'%';
+  document.getElementById('sv-habits').textContent=`${hd}/${habits.length}`;
+  document.getElementById('sv-hpct').textContent=hp+'%';
+  document.getElementById('pb-tasks').style.width=tp+'%';
+  document.getElementById('pb-habits').style.width=hp+'%';
+}
+
+// ════════════════════════════════════════════════════════════
+// TASKS
+// ════════════════════════════════════════════════════════════
+function renderTasks(){
+  const key=toKey(currentDate);
+  const list=getTasksForDate(ws,key);
+  const el=document.getElementById('task-list');el.innerHTML='';
+  if(list.length===0){
+    const e=document.createElement('div');e.className='empty';e.style.padding='12px 0';
+    e.innerHTML='<i class="ti ti-checkbox" style="font-size:22px;opacity:.3;display:block;margin-bottom:5px"></i>No tasks yet — type below to add one.';
+    el.appendChild(e);
+  }
+  list.forEach((task,idx)=>{
+    const row=document.createElement('div');row.className='task-row';row.draggable=true;
+    row.addEventListener('dragstart',e=>{dragSrc=idx;row.classList.add('dragging');e.dataTransfer.effectAllowed='move'});
+    row.addEventListener('dragend',()=>{row.classList.remove('dragging');el.querySelectorAll('.task-row').forEach(r=>r.classList.remove('drag-over'))});
+    row.addEventListener('dragover',e=>{e.preventDefault();el.querySelectorAll('.task-row').forEach(r=>r.classList.remove('drag-over'));row.classList.add('drag-over')});
+    row.addEventListener('drop',async e=>{
+      e.preventDefault();row.classList.remove('drag-over');
+      if(dragSrc!==null&&dragSrc!==idx){
+        const arr=cache[ws].tasks[key];
+        const [m]=arr.splice(dragSrc,1);
+        arr.splice(idx,0,m);
+        renderTasks();renderScore();
+        await reorderTasks(ws,key);
+      }
+    });
+    const h=document.createElement('span');h.className='drag-h';h.innerHTML='<i class="ti ti-grip-vertical"></i>';
+    const cb=document.createElement('div');cb.className='cb'+(task.completed?' checked':'');cb.setAttribute('role','checkbox');cb.setAttribute('aria-checked',task.completed);
+    cb.onclick=async()=>{task.completed=!task.completed;renderTasks();renderScore();await updateTask(ws,task.id,{completed:task.completed})};
+    const cat=getCat(task.category);
+    const dot=document.createElement('div');dot.className='cat-dot';dot.style.background=cat.color;dot.title=cat.label;
+    const inp=document.createElement('input');inp.type='text';inp.className='task-inp'+(task.completed?' done':'');inp.value=task.task_name;inp.placeholder='Task…';
+    let saveTimer=null;
+    inp.oninput=e=>{
+      task.task_name=e.target.value;
+      clearTimeout(saveTimer);
+      saveTimer=setTimeout(()=>updateTask(ws,task.id,{task_name:task.task_name}),400);
+    };
+    const badge=document.createElement('span');badge.className='cat-badge';badge.style.cssText=`background:${cat.dim};color:${cat.color}`;
+    badge.innerHTML=`<i class="ti ${cat.icon}" style="font-size:10px;margin-right:2px"></i>${cat.label}`;
+    const actions=document.createElement('span');actions.className='task-actions';
+    const arc=document.createElement('button');arc.className='tact arc';arc.title='Save to archive';arc.innerHTML='<i class="ti ti-archive"></i>';
+    arc.onclick=async()=>{
+      if(!task.task_name||!task.task_name.trim())return;
+      await addArchiveTask(ws,task.task_name,task.category,task.date,task.completed);
+      arc.innerHTML='<i class="ti ti-check"></i>';
+      setTimeout(()=>{arc.innerHTML='<i class="ti ti-archive"></i>'},1000);
+    };
+    const del=document.createElement('button');del.className='tact del';del.title='Delete task';del.innerHTML='<i class="ti ti-trash"></i>';
+    del.onclick=async()=>{await deleteTask(ws,task.id,key);renderTasks();renderScore()};
+    actions.append(arc,del);
+    row.append(h,cb,dot,inp,badge,actions);el.appendChild(row);
+  });
+  const addRow=document.createElement('div');addRow.className='add-task-row';
+  const inp=document.createElement('input');inp.type='text';inp.id='add-task-inp';inp.placeholder='Type a task and press Enter…';
+  inp.onkeydown=e=>{if(e.key==='Enter'){const txt=inp.value.trim();if(!txt)return;pendingText=txt;openCatModal()}};
+  const ab=document.createElement('button');ab.className='btn sm';ab.innerHTML='<i class="ti ti-archive"></i>';ab.title='From archive';ab.onclick=openArchivePopup;
+  addRow.append(inp,ab);el.appendChild(addRow);
+}
+
+function openCatModal(){
+  document.getElementById('modal-task-name').textContent=`"${pendingText}"`;
+  const grid=document.getElementById('modal-cat-grid');grid.innerHTML='';
+  cats().forEach(c=>{
+    const el=document.createElement('div');el.className='cat-opt';el.style.borderColor=c.color+'33';
+    el.innerHTML=`<span class="ce">${c.emoji}</span><span class="cl" style="color:${c.color}">${c.label}</span>`;
+    el.onclick=()=>confirmAddTask(c.id);
+    grid.appendChild(el);
+  });
+  openModal('modal-task');
+}
+
+async function confirmAddTask(catId){
+  const key=toKey(currentDate);
+  closeModal('modal-task');
+  await addTask(ws,key,pendingText,catId);
+  pendingText='';
+  renderTasks();renderScore();
+  setTimeout(()=>{const i=document.getElementById('add-task-inp');if(i)i.focus()},50);
+}
+
+async function addTaskFromArchive(text,cat){
+  const key=toKey(currentDate);
+  closeModal('modal-archive-popup');
+  await addTask(ws,key,text,cat);
+  renderTasks();renderScore();
+}
+</script>
+
+<script>
+// ════════════════════════════════════════════════════════════
+// HABITS
+// ════════════════════════════════════════════════════════════
+function renderHabitsDay(){
+  const key=toKey(currentDate);
+  const habits=cache[ws].habits;
+  const el=document.getElementById('habit-list-day');el.innerHTML='';
+  if(!habits.length){el.innerHTML='<div class="empty"><i class="ti ti-repeat"></i>No habits yet.</div>';return}
+  habits.forEach(h=>{
+    const row=document.createElement('div');row.className='habit-row';
+    const checked=!!(cache[ws].habitChecks[h.id]&&cache[ws].habitChecks[h.id][key]);
+    const cb=document.createElement('div');cb.className='cb'+(checked?' checked':'');
+    cb.onclick=async()=>{
+      const newVal=!checked;
+      cb.classList.toggle('checked',newVal);
+      if(!cache[ws].habitChecks[h.id])cache[ws].habitChecks[h.id]={};
+      cache[ws].habitChecks[h.id][key]=newVal;
+      renderHabitsDay();renderScore();
+      await toggleHabitCheck(ws,h.id,key,newVal);
+    };
+    const nm=document.createElement('span');nm.className='hname';nm.textContent=h.habit_name;
+    if(checked)nm.style.cssText='text-decoration:line-through;color:var(--text3)';
+    const str=getHabitStreak(h.id);
+    if(str>0){const s=document.createElement('span');s.className='streak';s.textContent=`${str}d`;row.append(cb,nm,s)}
+    else row.append(cb,nm);
+    el.appendChild(row);
+  });
+}
+
+function getHabitStreak(hid){
+  const checks=cache[ws].habitChecks[hid]||{};
+  let str=0;let d=new Date(todayDate());
+  for(let i=0;i<366;i++){d.setDate(d.getDate()-1);const k=toKey(d);if(checks[k])str++;else break}
+  return str;
+}
+
+function renderHabitMgmt(){
+  const habits=cache[ws].habits;const el=document.getElementById('habit-mgmt-list');el.innerHTML='';
+  if(!habits.length){el.innerHTML='<div class="empty" style="padding:12px 0">No habits yet.</div>';return}
+  habits.forEach((h)=>{
+    const row=document.createElement('div');row.className='habit-row';
+    const nm=document.createElement('span');nm.className='hname';nm.textContent=h.habit_name;
+    const str=getHabitStreak(h.id);const s=document.createElement('span');s.className='streak';s.textContent=str>0?`${str}d streak`:'';
+    const del=document.createElement('span');del.className='hdel';del.innerHTML='<i class="ti ti-trash"></i>';
+    del.onclick=async()=>{await deleteHabitDB(ws,h.id);renderHabitMgmt();renderHabitsDay();renderScore()};
+    row.append(nm,s,del);el.appendChild(row);
+  });
+}
+
+async function addHabit(){
+  const inp=document.getElementById('new-habit-inp');const name=inp.value.trim();if(!name)return;
+  inp.value='';
+  await addHabitDB(ws,name);
+  renderHabitMgmt();renderHabitsDay();renderScore();
+}
+
+// ════════════════════════════════════════════════════════════
+// NOTES
+// ════════════════════════════════════════════════════════════
+function renderNotes(){
+  const key=toKey(currentDate);
+  const area=document.getElementById('notes-area');
+  area.value=cache[ws].notes[key]||'';
+  area.oninput=()=>{
+    clearTimeout(notesT);
+    notesT=setTimeout(async()=>{
+      const k=toKey(currentDate);
+      await saveNote(ws,k,area.value);
+      const sl=document.getElementById('notes-saved');sl.textContent='Saved';setTimeout(()=>sl.textContent='',1500);
+    },500);
+  };
+}
+
+// ════════════════════════════════════════════════════════════
+// ARCHIVE
+// ════════════════════════════════════════════════════════════
+function getAllTasks(){
+  // combine archive_tasks table + all tasks ever stored in cache (for search)
+  const archiveItems = cache[ws].archive.map(t=>({
+    text:t.task_name, cat:t.category, dateKey:t.original_date||t.created_at?.slice(0,10), done:t.completed, source:'archive', id:t.id
+  }));
+  const taskItems = [];
+  Object.entries(cache[ws].tasks).forEach(([dateKey,arr])=>{
+    arr.forEach(t=>{ if(t.task_name && t.task_name.trim()) taskItems.push({text:t.task_name,cat:t.category,dateKey,done:t.completed,source:'task',id:t.id}); });
+  });
+  return [...archiveItems, ...taskItems];
+}
+
+function renderArchiveModal(){
+  const search=(document.getElementById('arch-search').value||'').toLowerCase();
+  const catF=document.getElementById('arch-cat').value;
+  let tasks=getAllTasks();
+  if(search)tasks=tasks.filter(t=>t.text.toLowerCase().includes(search));
+  if(catF)tasks=tasks.filter(t=>t.cat===catF);
+  tasks.sort((a,b)=>(b.dateKey||'').localeCompare(a.dateKey||''));
+  const el=document.getElementById('arch-modal-list');el.innerHTML='';
+  if(!tasks.length){el.innerHTML='<div class="empty"><i class="ti ti-archive"></i>No tasks found.</div>';return}
+  tasks.slice(0,80).forEach(t=>{
+    const cat=getCat(t.cat);const row=document.createElement('div');row.className='arch-row';
+    row.innerHTML=`<div class="cat-dot" style="background:${cat.color}"></div><div style="flex:1;font-size:13px">${t.text}</div><span class="cat-badge" style="background:${cat.dim};color:${cat.color}">${cat.label}</span><span style="font-size:11px;color:var(--text3)">${t.dateKey?fmtShort(fromKey(t.dateKey)):''}</span>`;
+    row.onclick=()=>addTaskFromArchive(t.text,t.cat);el.appendChild(row);
+  });
+}
+function openArchivePopup(){
+  const sel=document.getElementById('arch-cat');sel.innerHTML='<option value="">All</option>';
+  cats().forEach(c=>{const o=document.createElement('option');o.value=c.id;o.textContent=c.label;sel.appendChild(o)});
+  renderArchiveModal();openModal('modal-archive-popup');
+}
+function renderFullArchive(){
+  const search=(document.getElementById('main-arch-search').value||'').toLowerCase();
+  const catF=document.getElementById('main-arch-cat').value;
+  const sortV=document.getElementById('main-arch-sort').value;
+  let tasks=getAllTasks();
+  if(search)tasks=tasks.filter(t=>t.text.toLowerCase().includes(search));
+  if(catF)tasks=tasks.filter(t=>t.cat===catF);
+  tasks.sort((a,b)=>sortV==='oldest'?(a.dateKey||'').localeCompare(b.dateKey||''):(b.dateKey||'').localeCompare(a.dateKey||''));
+  const el=document.getElementById('main-archive-list');el.innerHTML='';
+  if(!tasks.length){el.innerHTML='<div class="empty"><i class="ti ti-archive"></i>No tasks yet.</div>';return}
+  tasks.forEach(t=>{
+    const cat=getCat(t.cat);const row=document.createElement('div');row.className='arch-row';
+    const si=t.done?'<i class="ti ti-check" style="color:var(--green);font-size:13px;flex-shrink:0"></i>':'<i class="ti ti-clock" style="color:var(--text3);font-size:13px;flex-shrink:0"></i>';
+    row.innerHTML=`${si}<div class="cat-dot" style="background:${cat.color};flex-shrink:0"></div><div style="flex:1;font-size:13px">${t.text}</div><span class="cat-badge" style="background:${cat.dim};color:${cat.color};flex-shrink:0">${cat.label}</span><span style="font-size:11px;color:var(--text3);flex-shrink:0">${t.dateKey?fmtShort(fromKey(t.dateKey)):''}</span>`;
+    el.appendChild(row);
+  });
+}
+function initFullArchive(){
+  const sel=document.getElementById('main-arch-cat');sel.innerHTML='<option value="">All categories</option>';
+  cats().forEach(c=>{const o=document.createElement('option');o.value=c.id;o.textContent=c.label;sel.appendChild(o)});
+  renderFullArchive();
+}
+</script>
+
+<script>
+// ════════════════════════════════════════════════════════════
+// ANALYTICS
+// ════════════════════════════════════════════════════════════
+function setATab(t){
+  currentATab=t;
+  ['daily','weekly','monthly','yearly','alltime'].forEach(n=>document.getElementById('atab-'+n).classList.toggle('active',n===t));
+  renderAnalytics();
+}
+
+function getDateRange(type){
+  const t=todayDate();const dates=[];
+  if(type==='weekly'){for(let i=6;i>=0;i--){const d=new Date(t);d.setDate(d.getDate()-i);dates.push(d)}}
+  else if(type==='monthly'){for(let i=29;i>=0;i--){const d=new Date(t);d.setDate(d.getDate()-i);dates.push(d)}}
+  else if(type==='yearly'){for(let i=11;i>=0;i--){const d=new Date(t);d.setMonth(d.getMonth()-i,1);dates.push(d)}}
+  return dates;
+}
+
+function getStatsForKey(key){
+  const tasks=(cache[ws].tasks[key]||[]).filter(t=>t.task_name&&t.task_name.trim());
+  const habits=cache[ws].habits;
+  const tT=tasks.length,dT=tasks.filter(t=>t.completed).length;
+  const tH=habits.length,dH=habits.filter(h=>cache[ws].habitChecks[h.id]&&cache[ws].habitChecks[h.id][key]).length;
+  const catMap={};cats().forEach(c=>catMap[c.id]={done:0,total:0});
+  tasks.forEach(t=>{const c=t.category||cats()[0].id;if(catMap[c]){catMap[c].total++;if(t.completed)catMap[c].done++}});
+  return{tT,dT,tH,dH,catMap};
+}
+
+function getAllTimeStats(){
+  const habits=cache[ws].habits;
+  let tT=0,dT=0,tH=0,dH=0;const catMap={};cats().forEach(c=>catMap[c.id]={done:0,total:0});
+  const monthMap={};
+  Object.entries(cache[ws].tasks).forEach(([key,arr])=>{
+    const tasks=arr.filter(t=>t.task_name&&t.task_name.trim());
+    tT+=tasks.length;dT+=tasks.filter(t=>t.completed).length;
+    tasks.forEach(t=>{const c=t.category||cats()[0].id;if(catMap[c]){catMap[c].total++;if(t.completed)catMap[c].done++}});
+    const mo=key.slice(0,7);
+    if(!monthMap[mo])monthMap[mo]={tT:0,dT:0,tH:0,dH:0};
+    monthMap[mo].tT+=tasks.length;monthMap[mo].dT+=tasks.filter(t=>t.completed).length;
+  });
+  // habits totals across all dates with checks
+  const allDateKeys=new Set();
+  Object.values(cache[ws].habitChecks).forEach(checks=>Object.keys(checks).forEach(k=>allDateKeys.add(k)));
+  Object.keys(cache[ws].tasks).forEach(k=>allDateKeys.add(k));
+  allDateKeys.forEach(key=>{
+    tH+=habits.length;
+    const dHere=habits.filter(h=>cache[ws].habitChecks[h.id]&&cache[ws].habitChecks[h.id][key]).length;
+    dH+=dHere;
+    const mo=key.slice(0,7);
+    if(!monthMap[mo])monthMap[mo]={tT:0,dT:0,tH:0,dH:0};
+    monthMap[mo].tH+=habits.length;monthMap[mo].dH+=dHere;
+  });
+
+  let bestMonth='—',bestPct=0;
+  Object.entries(monthMap).forEach(([mo,s])=>{const p=s.tT+s.tH>0?Math.round((s.dT+s.dH)/(s.tT+s.tH)*100):0;if(p>bestPct){bestPct=p;bestMonth=mo}});
+  const mostDone=cats().reduce((a,b)=>catMap[b.id].done>catMap[a.id].done?b:a,cats()[0]);
+  const mostMissed=cats().filter(c=>catMap[c.id].total>0).reduce((a,b)=>(catMap[b.id].total-catMap[b.id].done)>(catMap[a.id].total-catMap[a.id].done)?b:a,cats()[0]);
+  return{tT,dT,tH,dH,catMap,bestMonth,bestPct,mostDone,mostMissed};
+}
+
+function destroyCharts(){Object.values(chartInst).forEach(c=>{try{c.destroy()}catch{}});chartInst={}}
+const coBase={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#555a72',font:{size:10},maxRotation:45,autoSkip:true},grid:{color:'rgba(255,255,255,0.04)'}},y:{beginAtZero:true,ticks:{color:'#555a72',font:{size:10}},grid:{color:'rgba(255,255,255,0.04)'}}}};
+
+function renderAnalytics(){
+  const el=document.getElementById('analytics-content');
+  destroyCharts();
+  el.innerHTML='';
+
+  if(currentATab==='daily'){
+    const key=toKey(currentDate);const s=getStatsForKey(key);
+    const prod=s.tT+s.tH>0?Math.round((s.dT+s.dH)/(s.tT+s.tH)*100):0;
+    el.innerHTML=`
+      <div class="stats-grid" style="margin-top:4px">
+        <div class="stat-card"><div class="stat-val" style="color:var(--accent)">${s.dT}/${s.tT}</div><div class="stat-lbl">Tasks done</div></div>
+        <div class="stat-card"><div class="stat-val">${s.tT-s.dT}</div><div class="stat-lbl">Tasks missed</div></div>
+        <div class="stat-card"><div class="stat-val" style="color:var(--green)">${s.dH}/${s.tH}</div><div class="stat-lbl">Habits done</div></div>
+        <div class="stat-card"><div class="stat-val" style="color:var(--amber)">${prod}%</div><div class="stat-lbl">Productivity</div></div>
+      </div>
+      <div class="charts-2">
+        <div class="chart-card"><div class="chart-title">Task rate</div><div style="height:140px"><canvas id="a-pie-t"></canvas></div></div>
+        <div class="chart-card"><div class="chart-title">Habit rate</div><div style="height:140px"><canvas id="a-pie-h"></canvas></div></div>
+      </div>
+      <div class="sec-card"><div class="sec-head"><h2><span class="sec-head-icon purple"><i class="ti ti-category"></i></span>Category performance (today)</h2></div><div class="sec-body" id="a-cat-bars"></div></div>`;
+    setTimeout(()=>{
+      chartInst.pt=new Chart(document.getElementById('a-pie-t'),{type:'doughnut',data:{labels:['Done','Missed'],datasets:[{data:[s.dT||0,(s.tT-s.dT)||1],backgroundColor:['#4f8ef7','#252a3d'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
+      chartInst.ph=new Chart(document.getElementById('a-pie-h'),{type:'doughnut',data:{labels:['Done','Missed'],datasets:[{data:[s.dH||0,(s.tH-s.dH)||1],backgroundColor:['#3ecf6e','#252a3d'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
+      const catEl=document.getElementById('a-cat-bars');
+      cats().forEach(c=>{const cs=s.catMap[c.id]||{done:0,total:0};const pct=cs.total?Math.round(cs.done/cs.total*100):0;
+        catEl.innerHTML+=`<div style="margin-bottom:9px"><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px">${c.emoji} ${c.label}</span><span style="font-size:12px;color:var(--text2)">${cs.done}/${cs.total} — ${pct}%</span></div><div class="pct-bar" style="height:5px"><div class="pct-fill" style="background:${c.color};width:${pct}%"></div></div></div>`});
+    },30);
+    return;
+  }
+
+  if(currentATab==='alltime'){
+    const s=getAllTimeStats();
+    const tp=s.tT?Math.round(s.dT/s.tT*100):0;
+    el.innerHTML=`
+      <div class="stats-grid" style="margin-top:4px">
+        <div class="stat-card"><div class="stat-val" style="color:var(--accent)">${s.tT}</div><div class="stat-lbl">Total tasks created</div></div>
+        <div class="stat-card"><div class="stat-val" style="color:var(--green)">${s.dT}</div><div class="stat-lbl">Total completed</div></div>
+        <div class="stat-card"><div class="stat-val" style="color:var(--red)">${s.tT-s.dT}</div><div class="stat-lbl">Total missed</div></div>
+        <div class="stat-card"><div class="stat-val">${tp}%</div><div class="stat-lbl">All-time rate</div></div>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-val" style="color:var(--green)">${s.dH}</div><div class="stat-lbl">Habits completed</div></div>
+        <div class="stat-card"><div class="stat-val" style="color:var(--amber)">${s.bestMonth||'—'}</div><div class="stat-lbl">Best month (${s.bestPct}%)</div></div>
+        <div class="stat-card"><div class="stat-val" style="font-size:14px;color:var(--accent)">${s.mostDone?s.mostDone.emoji+' '+s.mostDone.label:'—'}</div><div class="stat-lbl">Most completed cat.</div></div>
+        <div class="stat-card"><div class="stat-val" style="font-size:14px;color:var(--red)">${s.mostMissed?s.mostMissed.emoji+' '+s.mostMissed.label:'—'}</div><div class="stat-lbl">Most missed cat.</div></div>
+      </div>
+      <div class="sec-card"><div class="sec-head"><h2><span class="sec-head-icon purple"><i class="ti ti-category"></i></span>All-time category breakdown</h2></div><div class="sec-body" id="at-cat-bars"></div></div>`;
+    setTimeout(()=>{
+      const catEl=document.getElementById('at-cat-bars');
+      cats().forEach(c=>{const cs=s.catMap[c.id]||{done:0,total:0};const pct=cs.total?Math.round(cs.done/cs.total*100):0;
+        catEl.innerHTML+=`<div style="margin-bottom:9px"><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px">${c.emoji} ${c.label}</span><span style="font-size:12px;color:var(--text2)">${cs.done}/${cs.total} — ${pct}%</span></div><div class="pct-bar" style="height:5px"><div class="pct-fill" style="background:${c.color};width:${pct}%"></div></div></div>`});
+    },30);
+    return;
+  }
+
+  // weekly / monthly / yearly
+  const tab=currentATab;
+  const dates=getDateRange(tab)||[];
+  const labels=dates.map(d=>tab==='yearly'?d.toLocaleDateString('en-IN',{month:'short'}):tab==='monthly'?d.toLocaleDateString('en-IN',{day:'numeric',month:'short'}):d.toLocaleDateString('en-IN',{weekday:'short'}));
+  const stats=dates.map(d=>{
+    if(tab==='yearly'){
+      const m=d.getMonth(),y=d.getFullYear();
+      const keys=Object.keys(cache[ws].tasks).filter(k=>{const dd=fromKey(k);return dd.getMonth()===m&&dd.getFullYear()===y});
+      const combined={tT:0,dT:0,tH:0,dH:0,catMap:{}};cats().forEach(c=>combined.catMap[c.id]={done:0,total:0});
+      // also include habit-only days in this month
+      const habitKeys=new Set();
+      Object.values(cache[ws].habitChecks).forEach(checks=>Object.keys(checks).forEach(k=>{const dd=fromKey(k);if(dd.getMonth()===m&&dd.getFullYear()===y)habitKeys.add(k)}));
+      const allKeys=new Set([...keys,...habitKeys]);
+      allKeys.forEach(k=>{const s=getStatsForKey(k);combined.tT+=s.tT;combined.dT+=s.dT;combined.tH+=s.tH;combined.dH+=s.dH;cats().forEach(c=>{combined.catMap[c.id].done+=s.catMap[c.id]?.done||0;combined.catMap[c.id].total+=s.catMap[c.id]?.total||0})});
+      return combined;
+    }
+    return getStatsForKey(toKey(d));
+  });
+  const totT=stats.reduce((a,s)=>a+s.tT,0),totD=stats.reduce((a,s)=>a+s.dT,0);
+  const totH=stats.reduce((a,s)=>a+s.tH,0),totHD=stats.reduce((a,s)=>a+s.dH,0);
+  const prod=stats.map(s=>{const t=s.tT+s.tH;return t===0?0:Math.round((s.dT+s.dH)/t*100)});
+  const avgP=prod.length?Math.round(prod.reduce((a,b)=>a+b,0)/prod.length):0;
+  const catTotals={};cats().forEach(c=>catTotals[c.id]={done:0,total:0});
+  stats.forEach(s=>cats().forEach(c=>{catTotals[c.id].done+=s.catMap[c.id]?.done||0;catTotals[c.id].total+=s.catMap[c.id]?.total||0}));
+
+  el.innerHTML=`
+    <div class="stats-grid" style="margin-top:4px">
+      <div class="stat-card"><div class="stat-val" style="color:var(--accent)">${totD}/${totT}</div><div class="stat-lbl">Tasks done</div></div>
+      <div class="stat-card"><div class="stat-val">${totT?Math.round(totD/totT*100):0}%</div><div class="stat-lbl">Task rate</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--green)">${totHD}/${totH}</div><div class="stat-lbl">Habits done</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--amber)">${avgP}%</div><div class="stat-lbl">Avg productivity</div></div>
+    </div>
+    <div class="charts-2">
+      <div class="chart-card"><div class="chart-title">Tasks completed</div><div style="height:150px"><canvas id="ac-tasks"></canvas></div></div>
+      <div class="chart-card"><div class="chart-title">Habit consistency</div><div style="height:150px"><canvas id="ac-habits"></canvas></div></div>
+    </div>
+    <div class="charts-2">
+      <div class="chart-card"><div class="chart-title">Task completion rate</div><div style="height:140px"><canvas id="ac-pie-t"></canvas></div></div>
+      <div class="chart-card"><div class="chart-title">Productivity %</div><div style="height:140px"><canvas id="ac-prod"></canvas></div></div>
+    </div>
+    <div class="sec-card"><div class="sec-head"><h2><span class="sec-head-icon purple"><i class="ti ti-category"></i></span>Category breakdown</h2></div><div class="sec-body">
+      <div style="height:160px"><canvas id="ac-cat"></canvas></div>
+    </div></div>`;
+
+  setTimeout(()=>{
+    chartInst.t=new Chart(document.getElementById('ac-tasks'),{type:'bar',data:{labels,datasets:[{label:'Total',data:stats.map(s=>s.tT),backgroundColor:'rgba(79,142,247,0.18)'},{label:'Done',data:stats.map(s=>s.dT),backgroundColor:'#4f8ef7'}]},options:coBase});
+    chartInst.h=new Chart(document.getElementById('ac-habits'),{type:'bar',data:{labels,datasets:[{label:'Total',data:stats.map(s=>s.tH),backgroundColor:'rgba(62,207,110,0.18)'},{label:'Done',data:stats.map(s=>s.dH),backgroundColor:'#3ecf6e'}]},options:coBase});
+    chartInst.pt=new Chart(document.getElementById('ac-pie-t'),{type:'doughnut',data:{labels:['Done','Remaining'],datasets:[{data:[totD||0,Math.max(0,totT-totD)||1],backgroundColor:['#4f8ef7','#252a3d'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
+    chartInst.prod=new Chart(document.getElementById('ac-prod'),{type:'line',data:{labels,datasets:[{data:prod,borderColor:'#4f8ef7',backgroundColor:'rgba(79,142,247,0.1)',tension:.3,fill:true,pointRadius:3,pointBackgroundColor:'#4f8ef7'}]},options:{...coBase,scales:{...coBase.scales,y:{...coBase.scales.y,max:100,ticks:{...coBase.scales.y.ticks,callback:v=>v+'%'}}}}});
+    chartInst.cat=new Chart(document.getElementById('ac-cat'),{type:'bar',data:{labels:cats().map(c=>c.emoji+' '+c.label),datasets:[{label:'Done',data:cats().map(c=>catTotals[c.id].done),backgroundColor:cats().map(c=>c.color)},{label:'Total',data:cats().map(c=>catTotals[c.id].total),backgroundColor:cats().map(c=>c.dim)}]},options:{...coBase,plugins:{legend:{display:true,labels:{color:'#8b90a4',font:{size:11}}}}}});
+  },30);
+}
+</script>
+
+<script>
+// ════════════════════════════════════════════════════════════
+// SYLLABUS TRACKER V2
+// Left-side subject navigation + premium table tracker
+// Edit Tracker mode: column add/rename/reorder/delete,
+// chapter add/rename/delete/drag-drop reorder
+// ════════════════════════════════════════════════════════════
+let activeSubjectKey = null;   // currently selected subject_key
+let editTrackerMode = false;   // edit mode toggle (per subject view)
+let syllDragSrc = null;        // drag index for chapter reordering
+
+function getSubjects(){ return cache[ws].syllSubjects || []; }
+function getSubject(key){ return getSubjects().find(s=>s.subject_key===key); }
+function getChapters(subjectKey){ return cache[ws].syllChapters[subjectKey] || []; }
+function getProgress(chapterId){ return (cache[ws].syllProgress[chapterId]||{}).progress || {}; }
+
+function calcSubjProgress(subjectKey){
+  const chapters=getChapters(subjectKey);
+  const subj=getSubject(subjectKey);
+  const colIds=(subj?.columns||[]).map(c=>c.id);
+  let completed=0;
+  chapters.forEach(ch=>{
+    const prog=getProgress(ch.id);
+    if(colIds.length>0 && colIds.every(cid=>prog[cid])) completed++;
+  });
+  return { completed, total: chapters.length, pct: chapters.length?Math.round(completed/chapters.length*100):0 };
+}
+
+function renderSyllabus(){
+  const subjects=getSubjects();
+  if(!subjects.length){
+    document.getElementById('syll-nav-container').innerHTML='';
+    document.getElementById('syll-content-container').innerHTML='<div class="empty"><i class="ti ti-book"></i>Loading syllabus…</div>';
+    return;
+  }
+  if(!activeSubjectKey || !subjects.find(s=>s.subject_key===activeSubjectKey)){
+    activeSubjectKey = subjects[0].subject_key;
+  }
+  renderSyllNav();
+  renderSyllSubjectContent();
+}
+
+// ── LEFT NAV ──
+function renderSyllNav(){
+  const subjects=getSubjects();
+  const navEl=document.getElementById('syll-nav-container');
+  navEl.innerHTML='';
+
+  // overall progress card
+  const overallPct = Math.round(subjects.reduce((sum,s)=>sum+calcSubjProgress(s.subject_key).pct,0)/subjects.length);
+  const overallCard=document.createElement('div'); overallCard.className='syll-overall-card';
+  overallCard.innerHTML=`
+    <div class="syll-overall-title"><i class="ti ti-target-arrow"></i>Overall Progress</div>
+    <div class="syll-overall-pct">${overallPct}%</div>
+    <div class="syll-overall-bar"><div class="syll-overall-bar-fill" style="width:${overallPct}%"></div></div>`;
+  navEl.appendChild(overallCard);
+
+  // nav list
+  const navCard=document.createElement('div'); navCard.className='syll-nav-card';
+  const head=document.createElement('div'); head.className='syll-nav-head';
+  head.innerHTML=`<i class="ti ti-list" style="margin-right:5px"></i>${ws==='neet'?'NEET Subjects':'SSC Subjects'}`;
+  navCard.appendChild(head);
+
+  subjects.forEach(s=>{
+    const prog=calcSubjProgress(s.subject_key);
+    const item=document.createElement('div');
+    item.className='syll-nav-item'+(s.subject_key===activeSubjectKey?' active':'');
+    item.style.setProperty('--subj-color', s.color);
+    item.onclick=()=>{ activeSubjectKey=s.subject_key; editTrackerMode=false; renderSyllabus(); };
+    item.innerHTML=`
+      <span class="syll-nav-emoji">${s.emoji}</span>
+      <div class="syll-nav-info">
+        <div class="syll-nav-label">${s.label}</div>
+        <div class="syll-nav-pct" style="color:${s.color}">${prog.pct}% · ${prog.completed}/${prog.total}</div>
+        <div class="syll-nav-bar"><div class="syll-nav-bar-fill" style="background:${s.color};width:${prog.pct}%"></div></div>
+      </div>`;
+    navCard.appendChild(item);
+  });
+  navEl.appendChild(navCard);
+}
+
+// ── MAIN CONTENT (subject header + table) ──
+function renderSyllSubjectContent(){
+  const subj=getSubject(activeSubjectKey);
+  const contentEl=document.getElementById('syll-content-container');
+  if(!subj){ contentEl.innerHTML=''; return; }
+  const prog=calcSubjProgress(activeSubjectKey);
+  const chapters=getChapters(activeSubjectKey);
+
+  contentEl.innerHTML='';
+
+  // header hero
+  const header=document.createElement('div'); header.className='syll-subj-header';
+  const circ=2*Math.PI*26;
+  const arc=circ*prog.pct/100;
+  header.innerHTML=`
+    <span class="syll-subj-emoji-big">${subj.emoji}</span>
+    <div class="syll-subj-titles">
+      <div class="syll-subj-title" style="color:${subj.color}">${subj.label}</div>
+      <div class="syll-subj-sub">Track lectures, notes, revisions and more — chapter by chapter</div>
+    </div>
+    <div class="syll-subj-stats">
+      <div class="syll-subj-stat"><div class="v">${prog.total}</div><div class="l">Total Chapters</div></div>
+      <div class="syll-subj-stat"><div class="v" style="color:${subj.color}">${prog.completed}</div><div class="l">Completed</div></div>
+      <div class="syll-subj-ring">
+        <svg width="64" height="64" viewBox="0 0 64 64">
+          <circle cx="32" cy="32" r="26" fill="none" stroke="var(--bg4)" stroke-width="6"/>
+          <circle cx="32" cy="32" r="26" fill="none" stroke="${subj.color}" stroke-width="6" stroke-linecap="round" stroke-dasharray="${arc.toFixed(1)} ${(circ-arc).toFixed(1)}" transform="rotate(-90 32 32)"/>
+        </svg>
+        <div class="syll-subj-ring-val" style="color:${subj.color}">${prog.pct}%</div>
+      </div>
+    </div>
+    <button class="edit-tracker-btn ${editTrackerMode?'active':''}" id="edit-tracker-toggle">
+      <i class="ti ti-${editTrackerMode?'check':'edit'}"></i>${editTrackerMode?'Done Editing':'Edit Tracker'}
+    </button>`;
+  contentEl.appendChild(header);
+  header.querySelector('#edit-tracker-toggle').onclick=()=>{ editTrackerMode=!editTrackerMode; renderSyllSubjectContent(); };
+
+  if(editTrackerMode){
+    const banner=document.createElement('div'); banner.className='edit-banner';
+    banner.innerHTML=`<i class="ti ti-info-circle"></i>Edit mode is ON for <b>${subj.label}</b> only. Drag <i class="ti ti-grip-vertical"></i> handles to reorder chapters. Use the column controls in the header to add, rename, reorder, or delete columns.`;
+    contentEl.appendChild(banner);
+  }
+
+  // table wrap
+  const tableWrap=document.createElement('div'); tableWrap.className='syll-table-wrap';
+  const scroll=document.createElement('div'); scroll.className='syll-table-scroll';
+  const table=document.createElement('table'); table.className='syll-table';
+
+  // ── thead ──
+  const thead=document.createElement('thead');
+  const trh=document.createElement('tr');
+  const thChap=document.createElement('th'); thChap.className='th-chapter';
+  thChap.innerHTML=editTrackerMode?'<span style="display:flex;align-items:center;gap:6px"><i class="ti ti-arrows-move" style="font-size:13px"></i>Chapter</span>':'Chapter';
+  trh.appendChild(thChap);
+
+  (subj.columns||[]).forEach((col,ci)=>{
+    const th=document.createElement('th');
+    if(editTrackerMode){
+      th.innerHTML='';
+      const wrap=document.createElement('div'); wrap.className='col-edit-th';
+      const inp=document.createElement('input'); inp.type='text'; inp.value=col.label;
+      inp.onchange=async e=>{
+        const newCols=[...subj.columns]; newCols[ci]={...newCols[ci],label:e.target.value.trim()||col.label};
+        await updateSubjectColumns(ws,activeSubjectKey,newCols); renderSyllSubjectContent();
+      };
+      const btnRow=document.createElement('div'); btnRow.className='col-move-btns';
+      const left=document.createElement('button'); left.className='col-move-btn'; left.innerHTML='<i class="ti ti-chevron-left"></i>'; left.title='Move left';
+      left.disabled=ci===0;
+      left.onclick=async()=>{ const newCols=[...subj.columns]; [newCols[ci-1],newCols[ci]]=[newCols[ci],newCols[ci-1]]; await updateSubjectColumns(ws,activeSubjectKey,newCols); renderSyllSubjectContent(); };
+      const right=document.createElement('button'); right.className='col-move-btn'; right.innerHTML='<i class="ti ti-chevron-right"></i>'; right.title='Move right';
+      right.disabled=ci===subj.columns.length-1;
+      right.onclick=async()=>{ const newCols=[...subj.columns]; [newCols[ci+1],newCols[ci]]=[newCols[ci],newCols[ci+1]]; await updateSubjectColumns(ws,activeSubjectKey,newCols); renderSyllSubjectContent(); };
+      const del=document.createElement('button'); del.className='col-del-btn'; del.innerHTML='<i class="ti ti-x"></i>'; del.title='Delete column';
+      del.onclick=async()=>{ if(!confirm(`Delete column "${col.label}"? Progress for this column will be lost.`))return; const newCols=subj.columns.filter((_,i)=>i!==ci); await updateSubjectColumns(ws,activeSubjectKey,newCols); renderSyllSubjectContent(); };
+      btnRow.append(left,right,del);
+      wrap.append(inp,btnRow);
+      th.appendChild(wrap);
+    } else {
+      th.textContent=col.label;
+    }
+    trh.appendChild(th);
+  });
+
+  const thCompleted=document.createElement('th'); thCompleted.className='th-completed'; thCompleted.textContent='Completed';
+  trh.appendChild(thCompleted);
+  if(editTrackerMode){ const thDel=document.createElement('th'); thDel.textContent=''; trh.appendChild(thDel); }
+  thead.appendChild(trh); table.appendChild(thead);
+
+  // ── tbody ──
+  const tbody=document.createElement('tbody');
+  chapters.forEach((ch,idx)=>{
+    const prog2=getProgress(ch.id);
+    const colIds=(subj.columns||[]).map(c=>c.id);
+    const allDone=colIds.length>0 && colIds.every(cid=>prog2[cid]);
+    const tr=document.createElement('tr');
+    if(allDone) tr.classList.add('row-complete');
+
+    if(editTrackerMode){
+      tr.draggable=true;
+      tr.addEventListener('dragstart',e=>{ syllDragSrc=idx; tr.classList.add('dragging'); e.dataTransfer.effectAllowed='move'; });
+      tr.addEventListener('dragend',()=>{ tr.classList.remove('dragging'); tbody.querySelectorAll('tr').forEach(r=>r.classList.remove('drag-over-row')); });
+      tr.addEventListener('dragover',e=>{ e.preventDefault(); tbody.querySelectorAll('tr').forEach(r=>r.classList.remove('drag-over-row')); tr.classList.add('drag-over-row'); });
+      tr.addEventListener('drop',async e=>{
+        e.preventDefault(); tr.classList.remove('drag-over-row');
+        if(syllDragSrc!==null && syllDragSrc!==idx){
+          const list=cache[ws].syllChapters[activeSubjectKey];
+          const [moved]=list.splice(syllDragSrc,1);
+          list.splice(idx,0,moved);
+          renderSyllSubjectContent();
+          await reorderChapters(ws,activeSubjectKey);
+        }
+      });
+    }
+
+    // chapter name cell
+    const tdChap=document.createElement('td'); tdChap.className='td-chapter';
+    if(editTrackerMode){
+      const handle=document.createElement('span'); handle.className='drag-handle-syll'; handle.innerHTML='<i class="ti ti-grip-vertical"></i>';
+      const num=document.createElement('span'); num.className='chap-num'; num.textContent=(idx+1)+'.';
+      const inp=document.createElement('input'); inp.className='chap-edit-name'; inp.type='text'; inp.value=ch.chapter_name;
+      let saveT=null;
+      inp.oninput=e=>{ clearTimeout(saveT); saveT=setTimeout(()=>renameChapter(ws,ch.id,activeSubjectKey,e.target.value),500); };
+      tdChap.append(handle,num,inp);
+    } else {
+      const num=document.createElement('span'); num.className='chap-num'; num.textContent=(idx+1)+'.';
+      const nm=document.createElement('span'); nm.textContent=ch.chapter_name;
+      tdChap.append(num,nm);
+    }
+    tr.appendChild(tdChap);
+
+    // progress columns
+    (subj.columns||[]).forEach(col=>{
+      const td=document.createElement('td');
+      const cb=document.createElement('div'); cb.className='big-cb'+(prog2[col.id]?' checked':'');
+      cb.setAttribute('role','checkbox'); cb.setAttribute('aria-checked',!!prog2[col.id]);
+      cb.onclick=async()=>{
+        const newVal=!prog2[col.id];
+        cb.classList.toggle('checked',newVal);
+        await setChapterProgress(ws,ch.id,col.id,newVal);
+        renderSyllSubjectContent();
+        renderSyllNav();
+      };
+      td.appendChild(cb);
+      tr.appendChild(td);
+    });
+
+    // completed pill
+    const tdCompleted=document.createElement('td');
+    const pill=document.createElement('span'); pill.className='completed-pill '+(allDone?'yes':'no');
+    pill.innerHTML=allDone?'<i class="ti ti-check"></i> Done':'<i class="ti ti-clock"></i> Pending';
+    tdCompleted.appendChild(pill);
+    tr.appendChild(tdCompleted);
+
+    // delete chapter (edit mode)
+    if(editTrackerMode){
+      const tdDel=document.createElement('td');
+      const del=document.createElement('button'); del.className='chap-del-btn'; del.innerHTML='<i class="ti ti-trash"></i>'; del.title='Delete chapter';
+      del.onclick=async()=>{ if(!confirm(`Delete "${ch.chapter_name}"? This cannot be undone.`))return; await deleteChapter(ws,ch.id,activeSubjectKey); renderSyllSubjectContent(); renderSyllNav(); };
+      tdDel.appendChild(del);
+      tr.appendChild(tdDel);
+    }
+
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  scroll.appendChild(table);
+  tableWrap.appendChild(scroll);
+
+  // add chapter row (edit mode only)
+  if(editTrackerMode){
+    const addRow=document.createElement('div'); addRow.className='add-chapter-row';
+    const inp=document.createElement('input'); inp.type='text'; inp.placeholder='Add new chapter…';
+    inp.onkeydown=async e=>{
+      if(e.key==='Enter'){
+        const name=inp.value.trim(); if(!name)return;
+        inp.value='';
+        await addChapter(ws,activeSubjectKey,name);
+        renderSyllSubjectContent(); renderSyllNav();
+      }
+    };
+    const btn=document.createElement('button'); btn.className='btn primary sm'; btn.innerHTML='<i class="ti ti-plus"></i> Add Chapter';
+    btn.onclick=async()=>{
+      const name=inp.value.trim(); if(!name)return;
+      inp.value='';
+      await addChapter(ws,activeSubjectKey,name);
+      renderSyllSubjectContent(); renderSyllNav();
+    };
+    addRow.append(inp,btn);
+    tableWrap.appendChild(addRow);
+  }
+
+  contentEl.appendChild(tableWrap);
+
+  if(chapters.length===0){
+    const empty=document.createElement('div'); empty.className='empty';
+    empty.innerHTML='<i class="ti ti-book-off"></i>No chapters yet. '+(editTrackerMode?'Add one above.':'Click "Edit Tracker" to add chapters.');
+    contentEl.appendChild(empty);
+  }
+}
+</script>
+
+<script>
+// ════════════════════════════════════════════════════════════
+// VIEW NAV
+// ════════════════════════════════════════════════════════════
+const ALL_VIEWS=['day','habits','archive','analytics','syllabus','account'];
+function setView(v){
+  currentView=v;
+  ALL_VIEWS.forEach(n=>{document.getElementById('view-'+n).classList.toggle('active',n===v);const b=document.getElementById('nav-'+n);if(b)b.classList.toggle('active',n===v)});
+  if(v==='analytics'){currentATab='daily';['daily','weekly','monthly','yearly','alltime'].forEach(n=>document.getElementById('atab-'+n).classList.toggle('active',n==='daily'));renderAnalytics()}
+  else if(v==='habits')renderHabitMgmt();
+  else if(v==='archive')initFullArchive();
+  else if(v==='syllabus')renderSyllabus();
+  else if(v==='account')renderAccountPage();
+}
+
+function shiftDate(delta){const d=new Date(currentDate);d.setDate(d.getDate()+delta);currentDate=d;renderAll()}
+function gotoToday(){currentDate=todayDate();renderAll();setView('day')}
+function openModal(id){document.getElementById(id).classList.add('open')}
+function closeModal(id){
+  document.getElementById(id).classList.remove('open');
+  // clear sensitive fields on close
+  if(id==='modal-changepass'){document.getElementById('cp-current').value='';document.getElementById('cp-new').value='';document.getElementById('cp-confirm').value='';hideMsg('changepass-error');hideMsg('changepass-success')}
+}
+function confirmDateJump(){const v=document.getElementById('date-picker-inp').value;if(v){const p=v.split('-');currentDate=new Date(+p[0],+p[1]-1,+p[2]);renderAll();setView('day')}closeModal('modal-date')}
+document.querySelectorAll('.modal-overlay').forEach(el=>el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('open')}));
+
+// ════════════════════════════════════════════════════════════
+// RENDER ALL (called after date/workspace change)
+// ════════════════════════════════════════════════════════════
+function renderAll(){
+  renderDateLabel();renderTasks();renderHabitsDay();renderNotes();renderScore();renderExamHeader();
+}
+</script>
+
+</body>
+</html>
